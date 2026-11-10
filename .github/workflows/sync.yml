@@ -1,0 +1,28 @@
+name: Sync from Vercel
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the latest page
+        run: |
+          set -e
+          curl -fsSL https://bookzy-phone-test.vercel.app/index.html -o index.html.new
+          curl -fsSL https://bookzy-phone-test.vercel.app/bundle.js -o bundle.js.new
+          grep -q 'id="root"' index.html.new
+          test $(wc -c < bundle.js.new) -gt 500000
+          mv index.html.new index.html
+          mv bundle.js.new bundle.js
+          touch .nojekyll
+      - name: Commit if changed
+        run: |
+          git config user.name "bookzy-sync"
+          git config user.email "bookzy-sync@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || (git commit -m "Sync from Vercel" && git push)
