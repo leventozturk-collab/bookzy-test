@@ -1,4 +1,3 @@
-
 /* ios-frame.jsx */
 // iOS.jsx — Simplified iOS 26 (Liquid Glass) device frame
 // Based on the iOS 26 UI Kit + Figma status bar spec. No assets, no deps.
@@ -649,7 +648,6 @@ Object.assign(window, {
   IOSListRow,
   IOSKeyboard
 });
-;
 /* icons.jsx */
 // icons.jsx — lightweight SF-symbol-flavored line icons
 // All accept { size, color, weight, filled }
@@ -1155,7 +1153,6 @@ Object.assign(window, {
   IconClose,
   IconHistory
 });
-;
 /* components.jsx */
 // components.jsx — iOS 26 minimalist primitives for Bookzy Seller
 // Tokens are inlined per-component (no shared `styles` object — keeps Babel scopes clean).
@@ -1401,11 +1398,17 @@ function SectionLabel({
 // GDSection — "Go deeper" zone section: label + card grouped, gap 10.
 // Sections live in a flex column with gap 28 (the zone owns all rhythm);
 // no other vertical padding/margin anywhere inside.
+// Layout experiments (Pro Scan Expanded "New" column) reach nested sections through this context.
+const BZ_GD_CTX = React.createContext(null);
 function GDSection({
   label,
   children,
   cardStyle = {}
 }) {
+  const lx = React.useContext(BZ_GD_CTX);
+  const soft = !!(lx && lx.softLabels);
+  // soft labels: a quieter title, and the part after " · " (the secondary note) quieter still
+  const parts = soft && typeof label === 'string' ? label.split(' · ') : null;
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
@@ -1416,13 +1419,18 @@ function GDSection({
     style: {
       fontFamily: TOKENS.font,
       fontSize: 13,
-      fontWeight: 600,
+      fontWeight: soft ? 500 : 600,
       textTransform: 'uppercase',
       letterSpacing: 0.6,
-      color: TOKENS.textSecondary,
+      color: soft ? 'rgba(60,60,67,0.50)' : TOKENS.textSecondary,
       padding: '0 24px'
     }
-  }, label), /*#__PURE__*/React.createElement("div", {
+  }, parts && parts.length > 1 ? /*#__PURE__*/React.createElement(React.Fragment, null, parts[0], /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: 'rgba(60,60,67,0.30)',
+      fontWeight: 400
+    }
+  }, " \xB7 ", parts.slice(1).join(' · '))) : label), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '0 16px',
       ...cardStyle
@@ -2043,7 +2051,6 @@ Object.assign(window, {
   SheetCloseButton,
   SheetHeader
 });
-;
 /* tabbar.jsx */
 // tabbar.jsx — Floating liquid-glass bottom tab bar (iOS 26)
 
@@ -2174,7 +2181,6 @@ function TabBar({
 Object.assign(window, {
   TabBar
 });
-;
 /* sales-card.jsx */
 // sales-card.jsx — Home dashboard sales card + Sheet (Option A) + Page (Option B)
 // Both detail surfaces share the same SalesDetailsBody so the data layer is one place.
@@ -3172,7 +3178,6 @@ Object.assign(window, {
   PERIOD_LABELS,
   SALES_DATA
 });
-;
 /* sales-card-v2.jsx */
 // sales-card-v2.jsx — Bar-chart variant of the home dashboard sales card.
 // Reuses SALES_DATA, computeFees, formatters, PeriodSelector, and the shared
@@ -3521,7 +3526,6 @@ Object.assign(window, {
   SalesCardV2,
   SalesBarChart
 });
-;
 /* sales-card-variants.jsx */
 // sales-card-variants.jsx — 4 alternate visual treatments of SalesCardV2.
 // All share the same data, functionality, and bar chart (SalesBarChart).
@@ -4164,7 +4168,6 @@ Object.assign(window, {
   SalesCardV2_Editorial,
   SalesCardV2_AccentCTA
 });
-;
 /* sales-card-dual-variants.jsx */
 // sales-card-dual-variants.jsx — F4-derived variants that show BOTH sales and
 // units above the segmented control. The segmented control then governs only
@@ -5027,7 +5030,6 @@ Object.assign(window, {
   SalesCardF10c,
   SalesCardF10d
 });
-;
 /* sales-card-centered-variants.jsx */
 // sales-card-centered-variants.jsx — F10c forked with center-aligned content.
 //
@@ -5432,7 +5434,6 @@ Object.assign(window, {
   SalesCardG4,
   SalesCardG5
 });
-;
 /* sales-details-variants.jsx */
 // sales-details-variants.jsx — Bottom-sheet redesigns for the "View full details"
 // flow. Same content as the current sheet MINUS any "vs. previous period"
@@ -6615,7 +6616,6 @@ Object.assign(window, {
   // is loaded after it.
   SalesDetailsSheet
 });
-;
 /* live-sales-card.jsx */
 // live-sales-card.jsx — Today's sales row.  Light, compact, tappable.
 //
@@ -6729,7 +6729,6 @@ function LiveSalesCard({
 Object.assign(window, {
   LiveSalesCard
 });
-;
 /* scans-card-variants.jsx */
 // scans-card-variants.jsx — Scan card variations + a couple subtle Buy Box tweaks.
 //
@@ -7383,7 +7382,6 @@ Object.assign(window, {
   ScansCardS5,
   BuyBoxCardB2
 });
-;
 /* scans-card-variants-2.jsx */
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // scans-card-variants-2.jsx — Round 2: S2 with more visible CTA, plus
@@ -8104,7 +8102,6 @@ Object.assign(window, {
   T4_DONUT,
   T5_DONUT
 });
-;
 /* home-cards.jsx */
 // home-cards.jsx — Dashboard cards that sit below the Live Sales hero on Home.
 //
@@ -8854,7 +8851,6 @@ Object.assign(window, {
   BuyBoxCard,
   TotalScansCard
 });
-;
 /* home-bb-scans-fullwidth.jsx */
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // home-bb-scans-fullwidth.jsx — full-width versions of Buy Box and
@@ -9839,7 +9835,6 @@ Object.assign(window, {
   ScansFullD,
   ScansFullE
 });
-;
 /* scan-device-subpage-variants.jsx */
 // scan-device-subpage-variants.jsx — 10 design directions for the
 // "Scans on this device" subpage (opens from the Home Scans card).
@@ -11192,7 +11187,6 @@ Object.assign(window, {
   ScanDeviceSubpageV9,
   ScanDeviceSubpageV10
 });
-;
 /* scans-device-subpage.jsx */
 // scans-device-subpage.jsx — Production "Scans on this device" subpage.
 //
@@ -11450,7 +11444,6 @@ Object.assign(window, {
   FloatingNavTitle,
   ScansDeviceSubpage
 });
-;
 /* feedback-subpage.jsx */
 // feedback-subpage.jsx — Production Feedback card (Home) + Feedback subpage.
 //
@@ -11768,7 +11761,6 @@ Object.assign(window, {
   FeedbackReviewCard,
   FeedbackSubpage
 });
-;
 /* price-entry.jsx */
 // price-entry.jsx — Reusable dollar-amount entry for Bookzy.
 //
@@ -12105,8 +12097,9 @@ function PECurrentSlider({
   value,
   onChange
 }) {
-  const lo = Math.max(0.5, current * 0.4);
-  const hi = current * 1.6;
+  // range: $10 below to $10 above the current price (never under $0.50)
+  const lo = Math.max(0.5, current - 10);
+  const hi = current + 10;
   const v = value == null ? current : Math.min(hi, Math.max(lo, value));
   const pct = (v - lo) / (hi - lo) * 100;
   const curPct = (current - lo) / (hi - lo) * 100;
@@ -12443,7 +12436,6 @@ Object.assign(window, {
   MoneyKeypad,
   PriceEntryBody
 });
-;
 /* high-pricing-alerts-subpage.jsx */
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // high-pricing-alerts-subpage.jsx — Production "High Pricing Alerts"
@@ -15706,7 +15698,6 @@ Object.assign(window, {
   SKUDetailsBody,
   skuDetailFor
 });
-;
 /* pricing-card-variants-2.jsx */
 // pricing-card-variants-2.jsx — Pricing Performance redesign with correct
 // Amazon / Bookzy terminology + priority weighting.
@@ -16404,7 +16395,6 @@ Object.assign(window, {
   PricingCardQ4,
   PricingCardQ5
 });
-;
 /* pricing-card-variants-3.jsx */
 // pricing-card-variants-3.jsx — Round 3 tweaks on PricingCardQ4.
 //
@@ -17303,7 +17293,6 @@ Object.assign(window, {
   PricingCardR3d,
   PricingCardR3e
 });
-;
 /* inventory-card-variants.jsx */
 // inventory-card-variants.jsx — Variations of the Inventory card.
 //
@@ -17740,7 +17729,6 @@ Object.assign(window, {
   InventoryCardV4,
   InventoryCardV5
 });
-;
 /* inventory-card-variants-2.jsx */
 // inventory-card-variants-2.jsx — Round 2: harmonized V3 × V4 mixes.
 //
@@ -18125,7 +18113,6 @@ Object.assign(window, {
   InventoryCardW4,
   InventoryCardW5
 });
-;
 /* inventory-card-variants-4.jsx */
 // inventory-card-variants-4.jsx — Round 4: X3 alignment tweaks.
 //
@@ -18590,7 +18577,6 @@ Object.assign(window, {
   InventoryCardY4,
   InventoryCardY5
 });
-;
 /* inventory-card-variants-5.jsx */
 // inventory-card-variants-5.jsx — Round 5: Y1 color treatments.
 //
@@ -19037,7 +19023,6 @@ Object.assign(window, {
   InventoryCardZ4,
   InventoryCardZ5
 });
-;
 /* inventory-card-variants-6.jsx */
 // inventory-card-variants-6.jsx — Round 6: value-zone styling tweaks.
 //
@@ -20376,7 +20361,6 @@ Object.assign(window, {
   InventoryCardVZ9b_D,
   InventoryCardVZ9b_E
 });
-;
 /* inventory-details-sheet.jsx */
 // inventory-details-sheet.jsx — bottom sheet for "Inventory · View details".
 //
@@ -20722,7 +20706,6 @@ Object.assign(window, {
   InvSheetRow,
   InvSheetTile
 });
-;
 /* orders-screen.jsx */
 // orders-screen.jsx — Orders tab. PRD: today's sales activity.
 //
@@ -25488,7 +25471,6 @@ Object.assign(window, {
   FilterSheet,
   OrderNavigator
 });
-;
 /* scan-screen.jsx */
 // scan-screen.jsx — Scan tab. PRD: tools & preferences hub + session launcher.
 //
@@ -26256,7 +26238,6 @@ Object.assign(window, {
   ScanScreenV2,
   IconScanBolt
 });
-;
 /* local-database-subpage.jsx */
 // local-database-subpage.jsx — "Local Database" subpage.
 // Reached from Scanner → "Local Database" row.  Slides in from the right.
@@ -26584,7 +26565,6 @@ function LocalDatabaseSubpage({
 Object.assign(window, {
   LocalDatabaseSubpage
 });
-;
 /* triggers-subpage.jsx */
 // triggers-subpage.jsx — "Triggers" subpage.
 // Reached from Scanner → "Triggers" row.  Slides in from the right.
@@ -26695,7 +26675,6 @@ function TriggersSubpage({
 Object.assign(window, {
   TriggersSubpage
 });
-;
 /* scan-settings-editors.jsx */
 // scan-settings-editors.jsx — shared editor subpages for Scan Settings.
 //
@@ -27552,7 +27531,6 @@ Object.assign(window, {
   SettingsEditorShell,
   SSESaveBar
 });
-;
 /* scan-settings-subpage.jsx */
 // scan-settings-subpage.jsx — "Scan Settings" subpage.
 // Reached from Scanner → "Scan Settings" row.  Slides in from the right.
@@ -27890,7 +27868,6 @@ Object.assign(window, {
   ssGetSbyb,
   ssSetSbyb
 });
-;
 /* pro-keepa-chart.jsx */
 // pro-keepa-chart.jsx
 // Full 6-month Keepa-style Price & Rank chart for the Pro Scan screen.
@@ -28256,7 +28233,6 @@ function ProKeepaCard({
 Object.assign(window, {
   ProKeepaCard
 });
-;
 /* book-details-core.jsx */
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // book-details-core.jsx — shared data + atoms for the Book Details bottom
@@ -28971,7 +28947,6 @@ Object.assign(window, {
   BDSectionLabel,
   BDSheetShell
 });
-;
 /* book-details-sheet.jsx */
 // book-details-sheet.jsx — production Book Details (Amazon-catalog) bottom
 // sheet. Design 5 "Card-stacked" from the picker, with full sheet chrome
@@ -29208,7 +29183,6 @@ function BookDetailsSheet({
 Object.assign(window, {
   BookDetailsSheet
 });
-;
 /* checks-core.jsx */
 // checks-core.jsx — shared data + atoms for the Results bottom sheet, which
 // shows TWO things for a scan:
@@ -30200,7 +30174,6 @@ Object.assign(window, {
   CSTriggerList,
   CSCheckRail
 });
-;
 /* checks-sheet.jsx */
 // checks-sheet.jsx — production Scan Results bottom sheet (Design 1:
 // "Banner + rail"). Shows the trigger run (verdict + each trigger's status,
@@ -31219,7 +31192,6 @@ Object.assign(window, {
   ResultsSheet,
   TriggersInfoBody
 });
-;
 /* landscape-chart-engine.jsx */
 // landscape-chart-engine.jsx
 // Full-screen landscape Keepa-style Price & Rank chart engine shared by every
@@ -31717,7 +31689,6 @@ Object.assign(window, {
   lFmtDateLong,
   lReadAt
 });
-;
 /* landscape-variants.jsx */
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // landscape-variants.jsx
@@ -33300,7 +33271,6 @@ Object.assign(window, {
   LV5,
   LV6
 });
-;
 /* keepa-landscape-overlay.jsx */
 // keepa-landscape-overlay.jsx
 // Unified Price & Rank history chart for the Pro Scan page.
@@ -33926,7 +33896,8 @@ function KeepaInlineCard({
 function KeepaSettingsSheet({
   open,
   onClose,
-  ext
+  ext,
+  showRange
 }) {
   const {
     visible,
@@ -34035,7 +34006,47 @@ function KeepaSettingsSheet({
       boxShadow: HS_CARD,
       padding: '6px 16px 12px'
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, showRange && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: TOKENS.font,
+      fontSize: 11.5,
+      fontWeight: 700,
+      color: sub,
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+      margin: '10px 0 8px'
+    }
+  }, "Range"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 3,
+      padding: 3,
+      background: 'rgba(60,60,67,0.07)',
+      borderRadius: 11,
+      marginBottom: 8
+    }
+  }, [['3m', '3 months'], ['6m', '6 months']].map(([v, l]) => {
+    const on = (ext.range === '3m' ? '3m' : '6m') === v;
+    return /*#__PURE__*/React.createElement("div", {
+      key: v,
+      onClick: () => ext.setRange(v),
+      style: {
+        flex: 1,
+        height: 34,
+        borderRadius: 8,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        fontFamily: TOKENS.font,
+        fontSize: 14,
+        fontWeight: 600,
+        color: on ? txt : sub,
+        background: on ? '#fff' : 'transparent',
+        boxShadow: on ? '0 1px 3px rgba(15,15,20,0.12)' : 'none'
+      }
+    }, l);
+  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: TOKENS.font,
       fontSize: 11.5,
@@ -34121,7 +34132,8 @@ function KeepaSettingsSheet({
 //   … at page root: {keepa.overlay}
 // The overlay (settings sheet + full-screen takeover) MUST render at the page
 // root so its scrim/landscape layer covers the whole device, not the scroll.
-function useKeepaChart() {
+function useKeepaChart(opts) {
+  const rangeInSettings = !!(opts && opts.rangeInSettings); // V2: 3M / 6M lives in the settings sheet
   const saved = keepaGetPrefs();
   const [range, setRange] = React.useState(saved.range || '6m');
   const [visible, setVisible] = React.useState(saved.visible || {
@@ -34167,7 +34179,8 @@ function useKeepaChart() {
   const overlay = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(KeepaSettingsSheet, {
     open: settingsOpen,
     onClose: () => setSettingsOpen(false),
-    ext: ext
+    ext: ext,
+    showRange: rangeInSettings
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
@@ -34199,14 +34212,14 @@ function useKeepaChart() {
   return {
     ext,
     inline,
-    overlay
+    overlay,
+    openSettings: () => setSettingsOpen(true)
   };
 }
 Object.assign(window, {
   useKeepaChart,
   KeepaInlineCard
 });
-;
 /* pro-scan-page.jsx */
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // pro-scan-page.jsx — the real Pro Scan page (Round-2 Approach A "Cockpit"),
@@ -38698,11 +38711,1317 @@ function PSCardEmpty({
 }
 
 // ── Full page (scrollable) ─────────────────────────────────────────
+// ── Stock / past-sales card, "S40" design (Stock Card Versions page) ──
+// One entry shown; the rest sit behind as a stack with dots (one per hidden entry, in its channel colour)
+// and a "+N" counter. The whole card opens the full list. With a single entry there is no stack, and
+// min / max go on two rows so the card keeps its height.
+function PSStackCard({
+  kind,
+  items,
+  onShowAll,
+  bare,
+  lead,
+  ghostCount,
+  dotsRight,
+  z11
+}) {
+  // lead = 'fact': "12 in stock" / "Sold May 28" opens the card, channel and condition go to the second row
+  const T = TOKENS,
+    l = items[0],
+    others = items.slice(1),
+    more = others.length > 0;
+  const ch = ORDER_CHIP[l.channel] || ORDER_CHIP.FBA,
+    cd = l.condition === 'New' ? ORDER_CHIP.New : ORDER_CHIP.Used;
+  const m = v => v == null ? '—' : '$' + Number(v).toFixed(2);
+  const gray = '#8E8E93',
+    gray2 = '#AEAEB2';
+  const small = {
+    fontSize: 12.5,
+    fontWeight: 500,
+    color: gray,
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap'
+  };
+  const cap = {
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+    lineHeight: 1.1,
+    whiteSpace: 'nowrap'
+  };
+  const set = l.minPrice != null || l.maxPrice != null;
+  const mm = (k, v) => /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...small,
+      lineHeight: '16px',
+      color: v != null ? gray : gray2
+    }
+  }, k, " ", m(v));
+  // three rows of the same height with the same gap between them
+  const ROW_H = 24,
+    ROW_GAP = 11;
+  const row = (children, st) => /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      minWidth: 0,
+      height: ROW_H,
+      ...st
+    }
+  }, children);
+  const edge = (inset, y, o) => /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      left: inset,
+      right: inset,
+      bottom: -y,
+      height: 30,
+      borderRadius: T.radius.xl,
+      background: '#fff',
+      opacity: o,
+      boxShadow: T.shadow
+    }
+  });
+  const chips = /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 9
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...cap,
+      color: ch.fg
+    }
+  }, l.channel), /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...cap,
+      color: cd.fg
+    }
+  }, l.condition)); // no dot between them
+  const soldDate = String(l.soldAt || '').replace(/^([A-Za-z]{3,})\.? 0?(\d+)/, '$1 $2'); // "Jan 2, 2026" (no leading zero)
+  const factTxt = kind === 'sales' ? `Sold ${String(l.soldAt || '').replace(/^([A-Za-z]{3,})\.? 0?(\d+).*$/, '$1 $2')}` : `${l.quantity} in stock`;
+  // Z1.1a (from Yours Card Layouts): left = "N in stock" / "Last sold" with channel + condition tucked right under it,
+  // then "N more SKUs →" / "N more sales →" (no dots) a little apart; right = price, then Min / Max. Everything else as above.
+  const z11Card = z11 ? (() => {
+    const condTxt = String(l.condition || '').toLowerCase().replace(/^\w/, a => a.toUpperCase());
+    const mmPart = (k, v) => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: k
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 500,
+        lineHeight: 1.25,
+        color: v != null ? gray2 : gray2,
+        whiteSpace: 'nowrap'
+      }
+    }, k), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 500,
+        lineHeight: 1.25,
+        color: v != null ? gray : gray2,
+        textAlign: 'right',
+        fontVariantNumeric: 'tabular-nums',
+        whiteSpace: 'nowrap'
+      }
+    }, m(v)));
+    const n = others.length;
+    const moreWords = `${n} more ${kind === 'sales' ? n === 1 ? 'sale' : 'sales' : n === 1 ? 'SKU' : 'SKUs'}`;
+    return /*#__PURE__*/React.createElement(Card, {
+      padding: 0,
+      onClick: more ? onShowAll : undefined,
+      style: {
+        overflow: 'hidden',
+        position: 'relative'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '15px 18px 15px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        minHeight: 24,
+        display: 'flex',
+        alignItems: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'baseline',
+        gap: 7,
+        fontFamily: T.fontDisplay,
+        fontSize: 16.5,
+        fontWeight: 650,
+        letterSpacing: -0.2,
+        color: T.text,
+        fontVariantNumeric: 'tabular-nums',
+        whiteSpace: 'nowrap',
+        lineHeight: 1.2
+      }
+    }, kind === 'sales' ? /*#__PURE__*/React.createElement(React.Fragment, null, "Last sold", /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontFamily: T.font,
+        fontSize: 13,
+        fontWeight: 500,
+        letterSpacing: 0,
+        color: gray
+      }
+    }, soldDate)) : `${l.quantity} in stock`)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'baseline',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+        lineHeight: 1.1,
+        whiteSpace: 'nowrap',
+        color: ch.fg
+      }
+    }, l.channel), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12.5,
+        fontWeight: 600,
+        lineHeight: 1.1,
+        whiteSpace: 'nowrap',
+        color: cd.fg
+      }
+    }, condTxt)), more && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 14,
+        minHeight: 24,
+        display: 'flex',
+        alignItems: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        fontSize: 12,
+        fontWeight: 600,
+        color: gray,
+        whiteSpace: 'nowrap',
+        lineHeight: 1.2
+      }
+    }, moreWords, /*#__PURE__*/React.createElement("svg", {
+      width: "10",
+      height: "10",
+      viewBox: "0 0 11 11",
+      fill: "none"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M2 5.5h7m-3-3l3 3-3 3",
+      stroke: gray,
+      strokeWidth: "1.8",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    }))))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        minHeight: 24,
+        display: 'flex',
+        alignItems: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontFamily: T.fontDisplay,
+        fontSize: 19.5,
+        fontWeight: 700,
+        letterSpacing: -0.36,
+        color: T.text,
+        fontVariantNumeric: 'tabular-nums',
+        lineHeight: 1.1
+      }
+    }, m(kind === 'sales' ? l.salePrice : l.currentPrice))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 3
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'inline-grid',
+        gridTemplateColumns: 'auto auto',
+        columnGap: 7,
+        rowGap: 3,
+        alignItems: 'baseline'
+      }
+    }, mmPart('Min', l.minPrice), mmPart('Max', l.maxPrice))))));
+  })() : null;
+  const card = z11Card || /*#__PURE__*/React.createElement(Card, {
+    padding: 0,
+    onClick: more ? onShowAll : undefined,
+    style: {
+      overflow: 'hidden',
+      position: 'relative'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '15px 18px 15px'
+    }
+  }, lead === 'fact' ?
+  /*#__PURE__*/
+  // the fact and the channel / condition read as one block on the left; the right keeps the row grid
+  React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'flex-start',
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      gap: 3
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      height: ROW_H,
+      display: 'inline-flex',
+      alignItems: 'baseline',
+      lineHeight: ROW_H + 'px',
+      gap: 7,
+      fontFamily: T.fontDisplay,
+      fontSize: 15.5,
+      fontWeight: 600,
+      letterSpacing: -0.2,
+      color: T.text,
+      fontVariantNumeric: 'tabular-nums',
+      whiteSpace: 'nowrap'
+    }
+  }, kind === 'sales' ? /*#__PURE__*/React.createElement(React.Fragment, null, "Last sold", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: T.font,
+      fontSize: 13,
+      fontWeight: 500,
+      letterSpacing: 0,
+      color: gray
+    }
+  }, soldDate)) : factTxt), chips), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      flexShrink: 0,
+      gap: 3
+    }
+  }, row(/*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: T.fontDisplay,
+      fontSize: 18,
+      fontWeight: 700,
+      letterSpacing: -0.36,
+      color: T.text,
+      fontVariantNumeric: 'tabular-nums',
+      lineHeight: 1.05
+    }
+  }, m(kind === 'sales' ? l.salePrice : l.currentPrice))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-grid',
+      gridTemplateColumns: 'auto auto',
+      columnGap: 7,
+      rowGap: 3,
+      alignItems: 'baseline'
+    }
+  }, [['Min', l.minPrice], ['Max', l.maxPrice]].map(([k, v]) => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: k
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...small,
+      lineHeight: '16px',
+      color: v != null ? gray : gray2
+    }
+  }, k), /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...small,
+      lineHeight: '16px',
+      textAlign: 'right',
+      color: v != null ? gray : gray2
+    }
+  }, m(v))))))) : /*#__PURE__*/React.createElement(React.Fragment, null, row(/*#__PURE__*/React.createElement(React.Fragment, null, chips, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: T.fontDisplay,
+      fontSize: 18,
+      fontWeight: 700,
+      letterSpacing: -0.36,
+      color: T.text,
+      fontVariantNumeric: 'tabular-nums',
+      lineHeight: 1.05
+    }
+  }, m(kind === 'sales' ? l.salePrice : l.currentPrice)))), row(/*#__PURE__*/React.createElement(React.Fragment, null, kind === 'sales' ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...small,
+      color: T.textSecondary
+    }
+  }, factTxt) : /*#__PURE__*/React.createElement("span", {
+    style: small
+  }, factTxt), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }), more ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...small,
+      color: set ? gray : gray2
+    }
+  }, set ? `Min ${m(l.minPrice)} · Max ${m(l.maxPrice)}` : 'Min / max not set') : mm('Min', l.minPrice)), {
+    marginTop: ROW_GAP
+  })), (more || lead !== 'fact') && row(more ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }), !dotsRight && /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4
+    }
+  }, others.slice(0, 8).map((o, i) => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    style: {
+      width: 7,
+      height: 7,
+      borderRadius: '50%',
+      background: (ORDER_CHIP[o.channel] || ORDER_CHIP.FBA).fg
+    }
+  }))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      height: ROW_H,
+      boxSizing: 'border-box',
+      borderRadius: ROW_H / 2,
+      fontSize: 13,
+      fontWeight: ghostCount === 'text' ? 600 : 700,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 5,
+      whiteSpace: 'nowrap',
+      ...(ghostCount === 'text' ? {
+        padding: 0,
+        background: 'transparent',
+        border: '1px solid transparent',
+        color: T.textSecondary
+      } // plain text: "3 more →"
+      : ghostCount ? {
+        padding: '0 10px 0 11px',
+        background: 'transparent',
+        border: '1px solid rgba(60,60,67,0.22)',
+        color: T.textSecondary
+      } : {
+        padding: '0 10px 0 11px',
+        background: T.text,
+        border: '1px solid transparent',
+        color: '#fff'
+      })
+    }
+  }, ghostCount === 'text' ? `${others.length} more` : `+${others.length}`, /*#__PURE__*/React.createElement("svg", {
+    width: "10",
+    height: "10",
+    viewBox: "0 0 11 11",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M2 5.5h7m-3-3l3 3-3 3",
+    stroke: ghostCount ? T.textSecondary : '#fff',
+    strokeWidth: "1.8",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }))), dotsRight && /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4
+    }
+  }, others.slice(0, 8).map((o, i) => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    style: {
+      width: 7,
+      height: 7,
+      borderRadius: '50%',
+      background: (ORDER_CHIP[o.channel] || ORDER_CHIP.FBA).fg
+    }
+  })))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }), mm('Max', l.maxPrice)), {
+    marginTop: ROW_GAP,
+    gap: 9
+  })));
+  const body = more ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      marginBottom: 14
+    }
+  }, edge(22, 15, 0.6), edge(11, 8, 0.85), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative'
+    }
+  }, card)) : card;
+  if (bare) return body; // used inside the merged "stock and sales" section
+  return /*#__PURE__*/React.createElement(GDSection, {
+    label: kind === 'sales' ? 'Past sales · this ASIN' : 'Your stock · this ASIN'
+  }, body);
+}
+
+// ── lower zone, "chapters" layout (layoutOpts.zone8): BB tiles, bold chapter titles, Buyback strip, link pills ──
+const pszM = v => '$' + Number(v).toFixed(2);
+const PSZ_GREEN = '#1F8A5B';
+// Buyback as a slim tinted strip, or as a coloured banner with a button
+function PSZBuyback({
+  offer,
+  big
+}) {
+  const has = offer > 0;
+  if (!big) return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      height: 46,
+      padding: '0 16px',
+      borderRadius: 16,
+      background: 'rgba(31,138,91,0.10)',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14.5,
+      fontWeight: 600,
+      color: PSZ_GREEN
+    }
+  }, "Buyback"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontWeight: 500,
+      color: 'rgba(31,138,91,0.75)'
+    }
+  }, "SBYB"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: TOKENS.fontDisplay,
+      fontSize: 17,
+      fontWeight: 700,
+      color: has ? PSZ_GREEN : 'rgba(31,138,91,0.55)',
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, has ? pszM(offer) : 'No offer'), /*#__PURE__*/React.createElement("svg", {
+    width: "7",
+    height: "12",
+    viewBox: "0 0 7 12",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M1 1l5 5-5 5",
+    stroke: PSZ_GREEN,
+    strokeWidth: "1.8",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  })));
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '16px 16px 16px 18px',
+      borderRadius: 22,
+      background: 'linear-gradient(135deg, rgba(31,138,91,0.16), rgba(31,138,91,0.08))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      fontWeight: 700,
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+      color: PSZ_GREEN
+    }
+  }, "Buyback offer"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 5,
+      fontFamily: TOKENS.fontDisplay,
+      fontSize: 26,
+      fontWeight: 700,
+      letterSpacing: -0.6,
+      color: '#14603F',
+      fontVariantNumeric: 'tabular-nums',
+      lineHeight: 1.05
+    }
+  }, has ? pszM(offer) : 'No offer'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4,
+      fontSize: 12.5,
+      fontWeight: 500,
+      color: 'rgba(20,96,63,0.75)'
+    }
+  }, "Sell Back Your Books")), has && /*#__PURE__*/React.createElement("span", {
+    style: {
+      height: 40,
+      padding: '0 16px',
+      borderRadius: 20,
+      background: PSZ_GREEN,
+      color: '#fff',
+      fontSize: 14.5,
+      fontWeight: 700,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      cursor: 'pointer'
+    }
+  }, "Sell", /*#__PURE__*/React.createElement("svg", {
+    width: "11",
+    height: "11",
+    viewBox: "0 0 11 11",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M2 5.5h7m-3-3l3 3-3 3",
+    stroke: "#fff",
+    strokeWidth: "1.8",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }))));
+}
+// Buy Box Range as two half-width tiles
+function PSZBBTiles({
+  buyBox,
+  corner
+}) {
+  const tile = (label, b, color) => {
+    const pos = Math.max(0, Math.min(1, (b.current - b.min) / (b.max - b.min || 1)));
+    const valSt = {
+      fontFamily: TOKENS.fontDisplay,
+      fontSize: 21,
+      fontWeight: 700,
+      letterSpacing: -0.4,
+      color,
+      fontVariantNumeric: 'tabular-nums'
+    };
+    const labSt = {
+      fontSize: 11,
+      fontWeight: 700,
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+      color: TOKENS.textSecondary
+    };
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        background: '#fff',
+        borderRadius: 20,
+        boxShadow: TOKENS.shadow,
+        padding: '14px 15px 15px'
+      }
+    }, corner ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: labSt
+    }, label), /*#__PURE__*/React.createElement("span", {
+      style: {
+        ...valSt,
+        lineHeight: 1
+      }
+    }, pszM(b.current))), /*#__PURE__*/React.createElement("div", {
+      "aria-hidden": "true",
+      style: {
+        ...valSt,
+        marginTop: 0,
+        visibility: 'hidden'
+      }
+    }, pszM(b.current))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      style: labSt
+    }, label), /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...valSt,
+        marginTop: 7
+      }
+    }, pszM(b.current))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 11,
+        position: 'relative',
+        height: 5,
+        borderRadius: 3,
+        background: 'rgba(118,118,128,0.16)'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        position: 'absolute',
+        top: -3.5,
+        left: `calc(${pos * 100}% - 6px)`,
+        width: 12,
+        height: 12,
+        borderRadius: '50%',
+        background: TOKENS.text,
+        boxShadow: '0 0 0 2.5px #fff'
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 8,
+        display: 'flex',
+        justifyContent: 'space-between',
+        fontSize: 11.5,
+        fontWeight: 500,
+        color: TOKENS.textTertiary,
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, /*#__PURE__*/React.createElement("span", null, pszM(b.min)), /*#__PURE__*/React.createElement("span", null, pszM(b.max))));
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, tile('New BB', buyBox.newBB, '#7B3FC4'), tile('Used BB', buyBox.usedBB, '#0E9488'));
+}
+const pszChapter = (t, sub) => t && /*#__PURE__*/React.createElement("div", {
+  style: {
+    padding: '0 24px',
+    fontFamily: TOKENS.fontDisplay,
+    fontSize: 20,
+    fontWeight: 700,
+    letterSpacing: -0.4,
+    color: TOKENS.text
+  }
+}, t, sub && /*#__PURE__*/React.createElement("span", {
+  style: {
+    marginLeft: 8,
+    fontFamily: TOKENS.font,
+    fontSize: 13,
+    fontWeight: 500,
+    letterSpacing: 0,
+    color: 'rgba(60,60,67,0.42)'
+  }
+}, sub));
+// links as three pill buttons (icon next to the name)
+function PSZLinksPills() {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8
+    }
+  }, PS_EXT.map(s => /*#__PURE__*/React.createElement("div", {
+    key: s.key,
+    style: {
+      flex: s.key === 'book' ? 1.25 : 1,
+      height: 44,
+      borderRadius: 22,
+      background: '#fff',
+      boxShadow: TOKENS.shadow,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 7,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap'
+    }
+  }, /*#__PURE__*/React.createElement(PSExtGlyph, {
+    name: s.key,
+    color: s.color,
+    size: 17
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13.5,
+      fontWeight: 600,
+      color: TOKENS.text,
+      letterSpacing: -0.1
+    }
+  }, s.label))));
+}
+
+// ── price-history chart card, C1 design (from Chart Card Versions): names on top that turn into that day's values while
+// touching (above the finger, same height), 3 numbers per side, 3M / 6M only, no divider. Used by the zone8 layout. ──
+function PSKChart({
+  w,
+  h,
+  dark = false,
+  range = '6m',
+  visible = {
+    newbb: true,
+    sr: true,
+    amz: true,
+    new: true,
+    used: true
+  },
+  showBands = true,
+  showGrid = true,
+  srFlip = false,
+  hoverIdx = null,
+  onHover,
+  axis = 'out',
+  lineLabels = false,
+  dateTag = false,
+  showFrame = true,
+  padT = 10,
+  padB = 24,
+  edge = false,
+  strongNums = false,
+  three = false
+}) {
+  // axis: 'out' numbers beside the plot · 'in' numbers inside the plot · 'ends' only the top and bottom number, inside · 'none'
+  // 'three' = three numbers per side, inside. edge = the plot runs to the very edge of the card. strongNums = darker, bolder side numbers.
+  const padL = axis === 'out' ? 38 : edge ? 0 : 12,
+    padR = lineLabels ? 50 : axis === 'out' ? 42 : edge ? 0 : 12;
+  const ticksP = axis === 'three' || three ? [[0.86, '$150'], [0.56, '$100'], [0.26, '$50']] : L_PRICE_TICKS;
+  const ticksR = axis === 'three' || three ? ticksP.map(([f]) => [f, lFmtRank(lRankOf(f))]) : L_RANK_TICKS;
+  const numFill = strongNums ? '#4A4A52' : null,
+    numSize = strongNums ? '10.5' : '9.5',
+    numW = strongNums ? '700' : '600';
+  const {
+    start,
+    end
+  } = lSlice(range);
+  const n = end - start;
+  const innerW = w - padL - padR,
+    innerH = h - padT - padB;
+  const xOf = i => padL + (i - start) / (n - 1) * innerW;
+  const yOf = f => padT + (1 - f) * innerH;
+  // SR (right axis) can be flipped: default small-rank-on-top, flipped
+  // mirrors the green line + its rank labels across the horizontal axis.
+  const ySR = f => padT + (srFlip ? f : 1 - f) * innerH;
+  const gridCol = dark ? 'rgba(255,255,255,0.08)' : 'rgba(60,60,67,0.10)';
+  const axisTxt = dark ? 'rgba(255,255,255,0.5)' : '#9A9AA0';
+  const frame = dark ? 'rgba(255,255,255,0.14)' : 'rgba(60,60,67,0.16)';
+  const bandCol = dark ? 'rgba(255,184,92,0.18)' : 'rgba(240,162,58,0.22)';
+  const col = k => dark ? LSERIES[k].colorDark : LSERIES[k].color;
+
+  // month ticks within slice
+  const monthTicks = [];
+  for (let i = start; i < end; i++) {
+    if (i === start || LDATES[i].getMonth() !== LDATES[i - 1].getMonth()) {
+      monthTicks.push({
+        i,
+        label: L_MON[LDATES[i].getMonth()]
+      });
+    }
+  }
+  const seriesOrder = ['sr', 'used', 'new', 'amz', 'newbb']; // back -> front
+
+  const ref = React.useRef(null);
+  const handleMove = e => {
+    if (!onHover) return;
+    const svg = ref.current;
+    if (!svg || !svg.getScreenCTM) return;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    // map screen point -> SVG user units; getScreenCTM includes any CSS
+    // rotation on the element/ancestors, so this works in the rotated
+    // full-screen overlay too (where clientX no longer maps to local x).
+    const loc = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+    const t = lClamp((loc.x - padL) / innerW, 0, 1);
+    const idx = start + Math.round(t * (n - 1));
+    onHover(lClamp(idx, start, end - 1));
+  };
+  const hx = hoverIdx != null ? xOf(hoverIdx) : null;
+  return /*#__PURE__*/React.createElement("svg", {
+    ref: ref,
+    viewBox: `0 0 ${w} ${h}`,
+    width: w,
+    height: h,
+    style: {
+      display: 'block',
+      touchAction: 'none',
+      cursor: onHover ? 'crosshair' : 'default'
+    },
+    onPointerMove: handleMove,
+    onPointerDown: handleMove,
+    onPointerUp: e => {
+      if (e.pointerType !== 'mouse' && onHover) onHover(null);
+    },
+    onPointerCancel: () => onHover && onHover(null),
+    onPointerLeave: () => onHover && onHover(null)
+  }, showBands && visible.amz && (() => {
+    const bottomY = padT + innerH;
+    const paths = [];
+    let i = start;
+    while (i < end) {
+      if (LDATA.amz[i] == null) {
+        i++;
+        continue;
+      }
+      const s = i;
+      while (i < end && LDATA.amz[i] != null) i++;
+      const e = i - 1;
+      let d = `M${xOf(s).toFixed(1)},${bottomY.toFixed(1)} L${xOf(s).toFixed(1)},${yOf(LDATA.amz[s]).toFixed(1)}`;
+      let prevY = yOf(LDATA.amz[s]);
+      for (let j = s + 1; j <= e; j++) {
+        const x = xOf(j),
+          y = yOf(LDATA.amz[j]);
+        d += ` L${x.toFixed(1)},${prevY.toFixed(1)} L${x.toFixed(1)},${y.toFixed(1)}`;
+        prevY = y;
+      }
+      d += ` L${xOf(e).toFixed(1)},${bottomY.toFixed(1)} Z`;
+      paths.push(d);
+    }
+    return paths.map((d, k) => /*#__PURE__*/React.createElement("path", {
+      key: k,
+      d: d,
+      fill: bandCol,
+      stroke: "none"
+    }));
+  })(), showGrid && ticksP.map(([f], i) => /*#__PURE__*/React.createElement("line", {
+    key: i,
+    x1: padL,
+    x2: w - padR,
+    y1: yOf(f),
+    y2: yOf(f),
+    stroke: gridCol,
+    strokeWidth: "1"
+  })), monthTicks.map((m, k) => /*#__PURE__*/React.createElement("g", {
+    key: k
+  }, showGrid && k > 0 ? /*#__PURE__*/React.createElement("line", {
+    x1: xOf(m.i),
+    x2: xOf(m.i),
+    y1: padT,
+    y2: padT + innerH,
+    stroke: gridCol,
+    strokeWidth: "1"
+  }) : null, /*#__PURE__*/React.createElement("text", {
+    x: xOf(m.i),
+    y: h - 8,
+    textAnchor: xOf(m.i) < 26 ? 'start' : xOf(m.i) > w - 26 ? 'end' : 'middle',
+    fontSize: "11",
+    fontFamily: LFONT,
+    fill: axisTxt
+  }, m.label))), showFrame && /*#__PURE__*/React.createElement("rect", {
+    x: padL,
+    y: padT,
+    width: innerW,
+    height: innerH,
+    fill: "none",
+    stroke: frame,
+    strokeWidth: "1"
+  }), hx != null && /*#__PURE__*/React.createElement("line", {
+    x1: hx,
+    x2: hx,
+    y1: padT,
+    y2: padT + innerH,
+    stroke: dark ? 'rgba(255,255,255,0.55)' : 'rgba(3,2,19,0.42)',
+    strokeWidth: "1",
+    strokeDasharray: "2 2"
+  }), visible.sr && /*#__PURE__*/React.createElement("polyline", {
+    points: (() => {
+      let s = '';
+      for (let i = start; i < end; i++) s += `${xOf(i).toFixed(1)},${ySR(LDATA.sr[i]).toFixed(1)} `;
+      return s;
+    })(),
+    fill: "none",
+    stroke: col('sr'),
+    strokeWidth: "1.2",
+    strokeLinejoin: "round",
+    strokeLinecap: "round",
+    opacity: "0.95"
+  }), seriesOrder.filter(k => k !== 'sr' && visible[k]).map(k => {
+    const {
+      solids,
+      dashes
+    } = lStepGeom(LDATA[k], xOf, yOf, start, end);
+    const sw = 1.2; // every line 1.2px on V2
+    return /*#__PURE__*/React.createElement("g", {
+      key: k
+    }, dashes.map((d, i) => /*#__PURE__*/React.createElement("line", {
+      key: i,
+      x1: d.x1,
+      y1: d.y1,
+      x2: d.x2,
+      y2: d.y2,
+      stroke: col(k),
+      strokeWidth: sw,
+      strokeDasharray: "4 3",
+      opacity: "0.75"
+    })), solids.map((d, i) => /*#__PURE__*/React.createElement("path", {
+      key: i,
+      d: d,
+      fill: "none",
+      stroke: col(k),
+      strokeWidth: sw,
+      strokeLinejoin: "round",
+      strokeLinecap: "round"
+    })));
+  }), hoverIdx != null && seriesOrder.filter(k => visible[k]).map(k => {
+    const v = LDATA[k][hoverIdx];
+    if (v == null) return null;
+    return /*#__PURE__*/React.createElement("circle", {
+      key: k,
+      cx: xOf(hoverIdx),
+      cy: (k === 'sr' ? ySR : yOf)(v),
+      r: "3.4",
+      fill: dark ? '#16161c' : '#fff',
+      stroke: col(k),
+      strokeWidth: "2"
+    });
+  }), axis !== 'none' && ticksP.map(([f, lbl], i) => axis === 'ends' && i !== 0 && i !== 3 ? null : axis === 'out' ? /*#__PURE__*/React.createElement("text", {
+    key: i,
+    x: padL - 6,
+    y: yOf(f) + 3.5,
+    textAnchor: "end",
+    fontSize: "10.5",
+    fontFamily: LFONT,
+    fill: axisTxt
+  }, lbl) : /*#__PURE__*/React.createElement("text", {
+    key: i,
+    x: padL + (edge ? 8 : 5),
+    y: yOf(f) - 4,
+    textAnchor: "start",
+    fontSize: numSize,
+    fontWeight: numW,
+    fontFamily: LFONT,
+    fill: numFill || axisTxt,
+    stroke: "#fff",
+    strokeWidth: "3.5",
+    paintOrder: "stroke"
+  }, lbl)), axis !== 'none' && !lineLabels && ticksR.map(([f, lbl], i) => axis === 'ends' && i !== 0 && i !== 3 ? null : axis === 'out' ? /*#__PURE__*/React.createElement("text", {
+    key: i,
+    x: w - padR + 6,
+    y: ySR(f) + 3.5,
+    textAnchor: "start",
+    fontSize: "10.5",
+    fontFamily: LFONT,
+    fill: axisTxt
+  }, lbl) : /*#__PURE__*/React.createElement("text", {
+    key: i,
+    x: w - padR - (edge ? 8 : 5),
+    y: ySR(f) - 4,
+    textAnchor: "end",
+    fontSize: numSize,
+    fontWeight: numW,
+    fontFamily: LFONT,
+    fill: numFill || axisTxt,
+    stroke: "#fff",
+    strokeWidth: "3.5",
+    paintOrder: "stroke"
+  }, lbl)), lineLabels && (() => {
+    const items = LORDER.filter(k => visible[k]).map(k => {
+      let i = end - 1;
+      while (i >= start && LDATA[k][i] == null) i--;
+      return i < start ? null : {
+        k,
+        y: (k === 'sr' ? ySR : yOf)(LDATA[k][i])
+      };
+    }).filter(Boolean).sort((a, b) => a.y - b.y);
+    for (let j = 1; j < items.length; j++) if (items[j].y < items[j - 1].y + 12) items[j].y = items[j - 1].y + 12;
+    return items.map(it => /*#__PURE__*/React.createElement("text", {
+      key: it.k,
+      x: w - padR + 6,
+      y: it.y + 3.5,
+      textAnchor: "start",
+      fontSize: "10",
+      fontWeight: "700",
+      fontFamily: LFONT,
+      fill: col(it.k)
+    }, LSERIES[it.k].label));
+  })(), dateTag && hx != null && (() => {
+    const d = LDATES[hoverIdx],
+      tw = 76,
+      x = lClamp(hx - tw / 2, padL, w - padR - tw);
+    return /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("rect", {
+      x: x,
+      y: padT + 4,
+      width: tw,
+      height: 18,
+      rx: 9,
+      fill: "rgba(3,2,19,0.82)"
+    }), /*#__PURE__*/React.createElement("text", {
+      x: x + tw / 2,
+      y: padT + 16.5,
+      textAnchor: "middle",
+      fontSize: "10.5",
+      fontWeight: "600",
+      fontFamily: LFONT,
+      fill: "#fff"
+    }, d.getDate() + ' ' + L_MON[d.getMonth()] + ' ' + d.getFullYear()));
+  })());
+}
+const PSK_RANGES = [['3m', '3M'], ['6m', '6M']]; // no 1Y
+function PSKSeg({
+  c,
+  small
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'inline-flex',
+      gap: 3,
+      padding: 3,
+      background: 'rgba(60,60,67,0.07)',
+      borderRadius: 11
+    }
+  }, PSK_RANGES.map(([v, l]) => {
+    const on = c.range === v;
+    return /*#__PURE__*/React.createElement("div", {
+      key: v,
+      onClick: () => c.setRange(v),
+      style: {
+        minWidth: small ? 38 : 46,
+        height: small ? 26 : 32,
+        borderRadius: 8,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        fontSize: small ? 12.5 : 14,
+        fontWeight: 600,
+        color: on ? TOKENS.text : TOKENS.textSecondary,
+        background: on ? '#fff' : 'transparent',
+        boxShadow: on ? '0 1px 3px rgba(15,15,20,0.12)' : 'none'
+      }
+    }, l);
+  }));
+}
+function pskSoftUnits(v) {
+  const m = /^(\$?)([\d.,]+)([kM]?)$/.exec(v);
+  if (!m) return v;
+  const g = {
+    color: '#B4B4BA',
+    fontWeight: 600
+  };
+  return /*#__PURE__*/React.createElement(React.Fragment, null, m[1] && /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...g,
+      fontSize: '0.8em',
+      marginRight: 1
+    }
+  }, "$"), m[2], m[3] && /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...g,
+      marginLeft: 1
+    }
+  }, m[3]));
+}
+// short names shown under the values while touching the chart (V2)
+const PSK_SHORT = {
+  newbb: 'NBB',
+  sr: 'SR',
+  amz: 'AMZ',
+  new: 'New',
+  used: 'Used'
+};
+function PSKLegend({
+  c,
+  style,
+  colorVals,
+  dots
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      minWidth: 0,
+      flex: 1,
+      ...style
+    }
+  }, LORDER.map(k => c.visible[k] && /*#__PURE__*/React.createElement("span", {
+    key: k,
+    style: {
+      position: 'relative',
+      flex: 1,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 5,
+      whiteSpace: 'nowrap',
+      minWidth: 0
+    }
+  }, !(colorVals && c.touching) && /*#__PURE__*/React.createElement("span", {
+    style: dots ? {
+      width: 4,
+      height: 4,
+      borderRadius: '50%',
+      background: LSERIES[k].color,
+      flexShrink: 0
+    } : {
+      width: 11,
+      height: 3,
+      borderRadius: 2,
+      background: LSERIES[k].color,
+      flexShrink: 0
+    }
+  }), c.touching ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: colorVals ? 13.5 : 12.5,
+      fontWeight: 700,
+      color: colorVals ? LSERIES[k].color : TOKENS.text,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, dots ? pskSoftUnits(c.byK[k] || '—') : c.byK[k] || '—'), dots && c.touching && /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: '100%',
+      marginTop: 2,
+      textAlign: 'center',
+      fontSize: 9.5,
+      fontWeight: 600,
+      letterSpacing: 0.3,
+      color: '#B4B4BA'
+    }
+  }, PSK_SHORT[k])) : /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: dots ? 12.5 : 12,
+      fontWeight: dots ? 600 : 500,
+      color: dots ? LSERIES[k].color : TOKENS.textSecondary
+    }
+  }, k === 'sr' ? dots ? 'Sales R' : 'SR' : LSERIES[k].label))));
+}
+const pskCard = {
+  background: '#fff',
+  position: 'relative'
+};
+const pskRow = (h, extra) => ({
+  height: h,
+  padding: '0 16px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 8,
+  ...extra
+});
+const pskChartProps = c => ({
+  w: 402,
+  range: c.range,
+  visible: c.visible,
+  srFlip: c.srFlip,
+  hoverIdx: c.hoverIdx,
+  onHover: c.setHoverIdx
+});
+function PSKCard1({
+  c
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...pskCard,
+      paddingBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: pskRow(64)
+  }, /*#__PURE__*/React.createElement(PSKLegend, {
+    c: c,
+    colorVals: true,
+    dots: true
+  })), /*#__PURE__*/React.createElement(PSKChart, _extends({}, pskChartProps(c), {
+    h: 200,
+    axis: "out",
+    three: true,
+    dateTag: true
+  })), /*#__PURE__*/React.createElement("div", {
+    style: pskRow(64, {
+      margin: '14px 16px 0',
+      padding: 0
+    })
+  }, /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement(KhRoundBtn, {
+    onClick: () => c.setSettingsOpen(true),
+    title: "Chart settings"
+  }, /*#__PURE__*/React.createElement(LGearIcon, {
+    s: 18,
+    c: TOKENS.textSecondary
+  })), /*#__PURE__*/React.createElement(KhRoundBtn, {
+    onClick: () => c.onExpand && c.onExpand(),
+    title: "Full screen"
+  }, /*#__PURE__*/React.createElement(LExpandIcon, {
+    s: 17,
+    c: TOKENS.textSecondary
+  })))));
+}
+// C1 card driven by the page's shared chart state (useKeepaChart): same range / series / full screen / settings as the app's chart
+function PSKChartCard({
+  keepa
+}) {
+  const e = keepa.ext;
+  const range = e.range === '3m' ? '3m' : '6m';
+  const [hoverIdx, setHoverIdx] = React.useState(null);
+  React.useEffect(() => {
+    setHoverIdx(null);
+  }, [range]);
+  const read = lReadAt(hoverIdx, e.visible);
+  const byK = {};
+  if (read) read.rows.forEach(r => {
+    byK[r.k] = r.value;
+  });
+  const c = {
+    range,
+    setRange: e.setRange,
+    visible: e.visible,
+    srFlip: e.srFlip,
+    hoverIdx,
+    setHoverIdx,
+    read,
+    byK,
+    touching: hoverIdx != null,
+    setSettingsOpen: () => keepa.openSettings && keepa.openSettings(),
+    onExpand: () => e.setFullScreen(true)
+  };
+  return /*#__PURE__*/React.createElement(PSKCard1, {
+    c: c
+  });
+}
+
+// Main app, "New version" top design: the page as V3 on Pro Scan Expanded (lower zone with BB tiles, the C1 chart card,
+// "Yours" with the Z1.1a cards, warm "Elsewhere"; offers table footer "• AMZ | More offers" centred; Buy Box value top right)
+const PSZ_APP_LAYOUT = {
+  isNew: true,
+  softLabels: true,
+  stackCards: true,
+  mergeHist: true,
+  cardLead: 'fact',
+  ghostCount: 'text',
+  celeb: 'poppers',
+  gdFade: 160,
+  noGdTitle: true,
+  zone8: true,
+  offersFoot: 'amz',
+  num700: true,
+  bbCorner: true,
+  footCenter: 'center',
+  dotsRight: true,
+  yoursZ11: true
+};
 function ProScanPage({
   onClose,
   offersComponent,
-  initialResult
+  initialResult,
+  layoutOpts: layoutOptsIn
 }) {
+  // no layoutOpts given (the Main app): use V3's when the "Top design" tweak is on New version
+  const layoutOpts = layoutOptsIn || (window.__bzTweaks && window.__bzTweaks.proScanTop === 'a11' ? PSZ_APP_LAYOUT : undefined); // layoutOpts: extra top-design options (used by the Pro Scan Expanded page's "New" column)
   // Show-all bottom sheet — reuses the production ShowAllSheet from the
   // order detail page. 'listings' | 'pastSales' | null.
   const [showAll, setShowAll] = React.useState(null);
@@ -38730,7 +40049,9 @@ function ProScanPage({
     setSearchMode(m);
     psSetSearchMode(m);
   };
-  const keepa = useKeepaChart();
+  const keepa = useKeepaChart({
+    rangeInSettings: !!(layoutOpts && layoutOpts.zone8)
+  });
   const sbyb = usePSBuyback();
   // Profit-display preference (By channel / Always FBA / Always FBM) — persisted.
   const [profitPref, setProfitPref] = React.useState(pfGetPref);
@@ -38831,6 +40152,9 @@ function ProScanPage({
     isLive: searchMode === 'lv' || liveDone,
     liveSearch: () => setLiveDone(true),
     ...window.pstvOptCtx(window.PSTV_APP_TOP),
+    dotsAt: window.__bzTweaks && window.__bzTweaks.proScanDots || 'asinR',
+    // tweak: where the sold / in-stock dots sit
+    ...(layoutOpts || {}),
     openSearch: () => setSearchOpen(true),
     openCamera: openCam,
     mode: searchMode,
@@ -38891,9 +40215,47 @@ function ProScanPage({
       });
     });
   };
+
+  // Right-edge swipe: a drag that starts within 28px of the right edge and moves left opens the camera.
+  const edgeRef = React.useRef(null);
+  const edgeStart = (x, y) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const b = el.getBoundingClientRect();
+    edgeRef.current = b.right - x <= 28 ? {
+      x,
+      y
+    } : null;
+  };
+  const edgeMove = (x, y) => {
+    const st = edgeRef.current;
+    if (!st) return;
+    const dx = x - st.x,
+      dy = y - st.y;
+    if (dx < -44 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      edgeRef.current = null;
+      openCam();
+    } else if (Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx)) edgeRef.current = null; // it's a scroll, not a swipe
+  };
+  const edgeEnd = () => {
+    edgeRef.current = null;
+  };
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(PSKeyframes, null), /*#__PURE__*/React.createElement("div", {
     ref: scrollRef,
     onScroll: onScroll,
+    onTouchStart: e => edgeStart(e.touches[0].clientX, e.touches[0].clientY),
+    onTouchMove: e => edgeMove(e.touches[0].clientX, e.touches[0].clientY),
+    onTouchEnd: edgeEnd,
+    onTouchCancel: edgeEnd,
+    onMouseDown: e => {
+      edgeStart(e.clientX, e.clientY);
+      if (edgeRef.current) e.preventDefault(); /* no text selection while swiping with a mouse */
+    },
+    onMouseMove: e => {
+      if (e.buttons) edgeMove(e.clientX, e.clientY);
+    },
+    onMouseUp: edgeEnd,
+    onMouseLeave: edgeEnd,
     style: {
       ...bzProScanVars(),
       flex: 1,
@@ -38903,16 +40265,18 @@ function ProScanPage({
       WebkitOverflowScrolling: 'touch'
     }
   }, a11 && !empty ? /*#__PURE__*/React.createElement("div", {
+    className: layoutOpts && layoutOpts.num700 ? 'psz-n700' : undefined,
     style: {
       marginLeft: inset,
       marginRight: inset
     }
-  }, /*#__PURE__*/React.createElement("style", null, window.PSTV_CSS), /*#__PURE__*/React.createElement(window.PSTVRound4, {
+  }, /*#__PURE__*/React.createElement("style", null, window.PSTV_CSS), layoutOpts && layoutOpts.num700 && /*#__PURE__*/React.createElement("style", null, `.psz-n700 [style*="font-size: 22px"]{font-size:24px !important;font-weight:700 !important}
+.psz-n700 .pstv-offers24 span[style*="font-size: 25px"]{font-weight:700 !important}`), /*#__PURE__*/React.createElement(window.PSTVRound4, {
     ctx: a11Ctx,
     o: window.PSTV_APP_TOP
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      height: 24
+      height: layoutOpts && layoutOpts.zone8 ? 0 : 24
     }
   })) : /*#__PURE__*/React.createElement("div", {
     style: {
@@ -38948,14 +40312,100 @@ function ProScanPage({
     style: {
       height: 24
     }
-  })), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(BZ_GD_CTX.Provider, {
+    value: layoutOpts || null
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       ...bzGdShadowVars(),
-      background: psGdZoneBg(),
-      paddingTop: 4,
-      paddingBottom: 124
+      background: layoutOpts && layoutOpts.zone8 && !empty ? TOKENS.bg : layoutOpts && layoutOpts.gdFade ? `linear-gradient(${TOKENS.bg} 0px, ${PS_WARM} ${layoutOpts.gdFade}px)` : psGdZoneBg(),
+      paddingTop: layoutOpts && layoutOpts.zone8 && !empty ? 0 : 4,
+      paddingBottom: layoutOpts && layoutOpts.zone8 && !empty ? 0 : 124
+    }
+  }, layoutOpts && layoutOpts.zone8 && !empty ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginLeft: inset,
+      marginRight: inset,
+      paddingTop: 16
+    }
+  }, /*#__PURE__*/React.createElement("style", null, `.psz-hero > div{border-radius:0!important;box-shadow:none!important}`), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16
     }
   }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '0 16px 10px'
+    }
+  }, /*#__PURE__*/React.createElement(PSZBBTiles, {
+    buyBox: result.buyBox,
+    corner: !!layoutOpts.bbCorner
+  })), /*#__PURE__*/React.createElement(PSKChartCard, {
+    keepa: keepa
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '24px 0 26px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 14
+    }
+  }, pszChapter('Yours', 'This ASIN'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '0 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12
+    }
+  }, result.listings && result.listings.length ? /*#__PURE__*/React.createElement(PSStackCard, {
+    bare: true,
+    lead: layoutOpts.cardLead,
+    ghostCount: layoutOpts.ghostCount,
+    dotsRight: !!layoutOpts.dotsRight,
+    z11: !!layoutOpts.yoursZ11,
+    kind: "stock",
+    items: result.listings,
+    onShowAll: () => setShowAll('listings')
+  }) : /*#__PURE__*/React.createElement(Card, {
+    padding: 0,
+    style: {
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement(EmptyCardLine, null, "No stock on this ASIN")), result.pastSales && result.pastSales.length ? /*#__PURE__*/React.createElement(PSStackCard, {
+    bare: true,
+    lead: layoutOpts.cardLead,
+    ghostCount: layoutOpts.ghostCount,
+    dotsRight: !!layoutOpts.dotsRight,
+    z11: !!layoutOpts.yoursZ11,
+    kind: "sales",
+    items: result.pastSales,
+    onShowAll: () => setShowAll('pastSales')
+  }) : /*#__PURE__*/React.createElement(Card, {
+    padding: 0,
+    style: {
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement(EmptyCardLine, null, "No past sales on this ASIN")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: PS_WARM,
+      padding: '24px 0 124px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 14
+    }
+  }, pszChapter('Elsewhere'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 28,
+      paddingTop: 4
+    }
+  }, sbyb.enabled && /*#__PURE__*/React.createElement(GDSection, {
+    label: "Buyback"
+  }, /*#__PURE__*/React.createElement(PSBuyback, {
+    offer: result.sbybOffer
+  })), /*#__PURE__*/React.createElement(GDSection, {
+    label: "More research"
+  }, /*#__PURE__*/React.createElement(PSExternal, null))))) : /*#__PURE__*/React.createElement("div", {
     style: {
       marginLeft: inset,
       marginRight: inset,
@@ -38964,7 +40414,7 @@ function ProScanPage({
       gap: 28,
       paddingTop: 26
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, !(layoutOpts && layoutOpts.noGdTitle) && /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '0 24px'
     }
@@ -38986,7 +40436,7 @@ function ProScanPage({
       color: TOKENS.textSecondary
     }
   }, "The full story on this item.") : null), empty ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(GDSection, {
-    label: "Buy Box Range"
+    label: layoutOpts && layoutOpts.isNew ? "Buy Box Range · Last 6 months" : "Buy Box Range"
   }, /*#__PURE__*/React.createElement(PSCardEmpty, {
     lines: 3
   })), /*#__PURE__*/React.createElement(GDSection, {
@@ -38998,17 +40448,57 @@ function ProScanPage({
   }, /*#__PURE__*/React.createElement(PSCardEmpty, {
     lines: 2
   }))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(GDSection, {
-    label: "Buy Box Range"
+    label: layoutOpts && layoutOpts.isNew ? "Buy Box Range · Last 6 months" : "Buy Box Range"
   }, /*#__PURE__*/React.createElement(PSBuyBox, {
     buyBox: result.buyBox
-  })), /*#__PURE__*/React.createElement(StockSection, {
+  })), layoutOpts && layoutOpts.mergeHist ? /*#__PURE__*/React.createElement(GDSection, {
+    label: "Your stock and sales \xB7 this ASIN"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12
+    }
+  }, result.listings && result.listings.length ? /*#__PURE__*/React.createElement(PSStackCard, {
+    bare: true,
+    lead: layoutOpts.cardLead,
+    ghostCount: layoutOpts.ghostCount,
+    kind: "stock",
+    items: result.listings,
+    onShowAll: () => setShowAll('listings')
+  }) : /*#__PURE__*/React.createElement(Card, {
+    padding: 0,
+    style: {
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement(EmptyCardLine, null, "No stock on this ASIN")), result.pastSales && result.pastSales.length ? /*#__PURE__*/React.createElement(PSStackCard, {
+    bare: true,
+    lead: layoutOpts.cardLead,
+    ghostCount: layoutOpts.ghostCount,
+    kind: "sales",
+    items: result.pastSales,
+    onShowAll: () => setShowAll('pastSales')
+  }) : /*#__PURE__*/React.createElement(Card, {
+    padding: 0,
+    style: {
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement(EmptyCardLine, null, "No past sales on this ASIN")))) : /*#__PURE__*/React.createElement(React.Fragment, null, layoutOpts && layoutOpts.stackCards && result.listings && result.listings.length ? /*#__PURE__*/React.createElement(PSStackCard, {
+    kind: "stock",
+    items: result.listings,
+    onShowAll: () => setShowAll('listings')
+  }) : /*#__PURE__*/React.createElement(StockSection, {
     listings: result.listings,
     currentSku: "",
     onShowAll: () => setShowAll('listings')
-  }), /*#__PURE__*/React.createElement(PastSalesSection, {
+  }), layoutOpts && layoutOpts.stackCards && result.pastSales && result.pastSales.length ? /*#__PURE__*/React.createElement(PSStackCard, {
+    kind: "sales",
+    items: result.pastSales,
+    onShowAll: () => setShowAll('pastSales')
+  }) : /*#__PURE__*/React.createElement(PastSalesSection, {
     sales: result.pastSales,
     onShowAll: () => setShowAll('pastSales')
-  }), /*#__PURE__*/React.createElement(GDSection, {
+  })), /*#__PURE__*/React.createElement(GDSection, {
     label: "Market History"
   }, keepa.inline), sbyb.enabled && /*#__PURE__*/React.createElement(GDSection, {
     label: "Buyback"
@@ -39020,7 +40510,7 @@ function ProScanPage({
       opacity: empty ? 0.45 : 1,
       pointerEvents: empty ? 'none' : 'auto'
     }
-  }, /*#__PURE__*/React.createElement(PSExternal, null))))), /*#__PURE__*/React.createElement("style", null, `@keyframes ps-sweep {
+  }, /*#__PURE__*/React.createElement(PSExternal, null)))))), /*#__PURE__*/React.createElement("style", null, `@keyframes ps-sweep {
         0% { transform: translateX(-130%) skewX(-14deg); opacity: 0; }
         12% { opacity: 1; }
         100% { transform: translateX(130%) skewX(-14deg); opacity: 0; }
@@ -39044,7 +40534,10 @@ function ProScanPage({
       background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 100%)',
       animation: 'ps-sweep 0.62s ease-out forwards'
     }
-  })) : null, a11 && !window.PSTV_APP_TOP.barBottom ? /*#__PURE__*/React.createElement("div", {
+  })) : null, a11 && !empty && window.PSTV_APP_TOP.scrollPage && window.PSTVScrollChips && /*#__PURE__*/React.createElement(window.PSTVScrollChips, {
+    pageRef: scrollRef,
+    ctx: a11Ctx
+  }), a11 && !window.PSTV_APP_TOP.barBottom ? /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
       inset: 0,
@@ -39637,7 +41130,7 @@ function PSCameraView({
       transition: 'transform 0.34s cubic-bezier(0.32, 0.72, 0, 1)',
       pointerEvents: open ? 'auto' : 'none'
     }
-  }, result && sel && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, result && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       flexShrink: 0
     }
@@ -39846,7 +41339,6 @@ Object.assign(window, {
   psGetSearchMode,
   psSetSearchMode
 });
-;
 /* pro-scan-l9-block.jsx */
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // pro-scan-l9-block.jsx — Production port of the L9v2 scan-result top block.
@@ -40545,7 +42037,6 @@ Object.assign(window, {
   L9StatsProductCard,
   L9Offers
 });
-;
 /* offers-rail.jsx */
 // offers-rail.jsx — production offers table (approved variant 13A).
 //
@@ -40889,7 +42380,6 @@ function OffersRailCard({
 Object.assign(window, {
   OffersRailCard
 });
-;
 /* search-sheet-v3.jsx */
 // search-sheet-v3.jsx — the v3 search sheet, wired into the real app.
 // Ports the approved v3 exploration (search bar with tappable mode chip +
@@ -41930,7 +43420,6 @@ function SearchSheet({
 Object.assign(window, {
   SearchSheet
 });
-;
 /* scan-session-subpages.jsx */
 // scan-session-subpages.jsx — full-screen scan session pages launched by
 // the big Scan button on the Scanner tab.  Which page opens depends on the
@@ -42071,7 +43560,6 @@ Object.assign(window, {
   LegacyScanSubpage,
   ProScanSubpage
 });
-;
 /* more-screen.jsx */
 // more-screen.jsx — More tab + Account subpage + Chat (Support) subpage.
 //
@@ -43612,7 +45100,6 @@ Object.assign(window, {
   AccountPage,
   SupportChatPage
 });
-;
 /* screens.jsx */
 // screens.jsx — Empty placeholder screens, with SalesCard wired into Home.
 
@@ -43711,7 +45198,6 @@ Object.assign(window, {
   ScanScreen,
   MoreScreen
 });
-;
 /* pro-scan-top-versions.jsx */
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // pro-scan-top-versions.jsx — 10 subtle variations of the current Pro Scan
@@ -43753,8 +45239,8 @@ function pstvMakeCfg(cfg, seed) {
       scenario: 'clean'
     });
     const a = run.triggers.find(t => t.status === 'accepted');
-    if (a && !!a.noTP === !cfg.target) break;
-  }
+    if (a && (cfg.target == null || !!a.noTP === !cfg.target)) break;
+  } // target left out = either
   const set = new Set(cfg.flags ? pstvPickN(['access', 'multi', 'ip', 'overstock', 'digital'], 2) : []);
   run = {
     ...run,
@@ -44131,6 +45617,53 @@ function PSTVBook({
 }
 
 // Stats area variants. style: 'threeCards' | 'bare' | 'onePlain' | 'splitProfit' | 'bareBelow'
+// "ASR  Non-book" label for non-book items. Writes the full word when the cell is wide enough,
+// otherwise the short form. Measured against a hidden copy of the full label.
+const PSTV_NB_C = '#5E5CE6';
+function PSTVNbLabel() {
+  const box = React.useRef(null),
+    full = React.useRef(null);
+  const [short, setShort] = React.useState(false);
+  React.useLayoutEffect(() => {
+    const fit = () => {
+      if (box.current && full.current) setShort(full.current.offsetWidth > box.current.clientWidth + 0.5);
+    };
+    fit();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(box.current);
+    return () => ro.disconnect();
+  }, []);
+  const word = t => /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: PSTV_NB_C,
+      fontWeight: 600
+    }
+  }, t);
+  return /*#__PURE__*/React.createElement("span", {
+    ref: box,
+    style: {
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'baseline',
+      gap: 4,
+      marginRight: -5,
+      overflow: 'hidden'
+    }
+  }, "ASR", word(short ? 'N-book' : 'Non-book'), /*#__PURE__*/React.createElement("span", {
+    ref: full,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      visibility: 'hidden',
+      display: 'inline-flex',
+      gap: 4,
+      whiteSpace: 'nowrap'
+    }
+  }, "ASR", word('Non-book')));
+}
 function PSTVStatsArea({
   ctx,
   style,
@@ -44152,7 +45685,15 @@ function PSTVStatsArea({
     whiteSpace: 'nowrap',
     lineHeight: 1.05
   });
-  const lab = ctx.ts ? {
+  // A19 (statSoft): quieter labels with more room above the value
+  const labGap = ctx.statSoft ? 9 : 5;
+  const lab = ctx.statSoft ? {
+    fontSize: 12,
+    fontWeight: 500,
+    color: '#A1A1A6',
+    letterSpacing: 0.2,
+    whiteSpace: 'nowrap'
+  } : ctx.ts ? {
     fontSize: 12,
     fontWeight: 600,
     color: PSTV_T.textSecondary,
@@ -44167,6 +45708,7 @@ function PSTVStatsArea({
   };
   // units: subtle K/M on ASR (K rounded, M with one decimal) and "/180" on Sold Days,
   // styled like the $ on Profit.
+  const size0 = () => sz;
   const unit = (txt, size) => /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 13,
@@ -44175,6 +45717,31 @@ function PSTVStatsArea({
       marginLeft: 3
     }
   }, txt);
+  // A16–A18: the ASR's K / M changes the number 1000-fold, so it can be stronger than the fixed "$" and "/180".
+  const AU = {
+    a: {
+      fontSize: 15,
+      fontWeight: 600,
+      color: '#6C6C70',
+      marginLeft: 2
+    },
+    b: {
+      fontSize: 16,
+      fontWeight: 700,
+      color: PSTV_T.text,
+      marginLeft: 2
+    },
+    c: {
+      ...num(size0()),
+      marginLeft: 1
+    }
+  }[ctx.asrUnit];
+  const asrUnit = (txt, size) => AU ? /*#__PURE__*/React.createElement("span", {
+    style: ctx.asrUnit === 'c' ? {
+      ...num(size),
+      marginLeft: 1
+    } : AU
+  }, txt) : unit(txt, size);
   const asrNode = size => {
     const n = r.asr;
     if (n >= 1e6) return /*#__PURE__*/React.createElement("span", {
@@ -44184,7 +45751,7 @@ function PSTVStatsArea({
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: num(size)
-    }, (n / 1e6).toFixed(1).replace(/\.0$/, '')), unit('M', size));
+    }, (n / 1e6).toFixed(1).replace(/\.0$/, '')), asrUnit('M', size));
     if (n >= 1e3) return /*#__PURE__*/React.createElement("span", {
       style: {
         display: 'inline-flex',
@@ -44192,7 +45759,7 @@ function PSTVStatsArea({
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: num(size)
-    }, Math.round(n / 1e3)), unit('K', size));
+    }, Math.round(n / 1e3)), asrUnit('K', size));
     return /*#__PURE__*/React.createElement("span", {
       style: num(size)
     }, n);
@@ -44227,26 +45794,9 @@ function PSTVStatsArea({
   }, "$"), /*#__PURE__*/React.createElement("span", {
     style: num(size)
   }, psProfitTxt(ctx.profit)));
-  // 26.1: non-book items get a tiny "Non-book" tag beside the ASR label
+  // non-book items: "Non-book" in its own colour beside the ASR label (shortened to "N-book" when it doesn't fit)
   const nb = ctx.nbAsr && r.category !== 'Book';
-  const label = k => k === 'asr' ? nb ? /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 5
-    }
-  }, "ASR", /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 9,
-      fontWeight: 700,
-      letterSpacing: 0.4,
-      color: '#8E8E93',
-      background: 'rgba(118,118,128,0.12)',
-      padding: '2px 5px',
-      borderRadius: 5,
-      lineHeight: 1
-    }
-  }, "NB")) : 'ASR' : k === 'soldDays' ? 'Sold Days' : profitLbl;
+  const label = k => k === 'asr' ? nb ? /*#__PURE__*/React.createElement(PSTVNbLabel, null) : 'ASR' : k === 'soldDays' ? 'Sold Days' : profitLbl;
   const keys = ['asr', 'soldDays', 'profit'];
   const cell = (k, size, extra, below) => /*#__PURE__*/React.createElement("div", {
     key: k,
@@ -44261,13 +45811,13 @@ function PSTVStatsArea({
   }, below ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", null, value(k, size)), /*#__PURE__*/React.createElement("div", {
     style: {
       ...lab,
-      marginTop: 5
+      marginTop: labGap
     }
   }, label(k))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: lab
   }, label(k)), /*#__PURE__*/React.createElement("div", {
     style: {
-      marginTop: 5
+      marginTop: labGap
     }
   }, value(k, size))));
   const divider = i => /*#__PURE__*/React.createElement("div", {
@@ -44586,7 +46136,9 @@ function PSTVOffersScroll({
   selectedId,
   onSelect,
   onMore,
-  fixed
+  fixed,
+  foot,
+  footCenter
 }) {
   const T = window.TOKENS;
   const {
@@ -44724,7 +46276,64 @@ function PSTVOffersScroll({
       background: T.divider,
       margin: '4px 0 0'
     }
-  }), /*#__PURE__*/React.createElement("div", {
+  }), foot === 'amz' ? (() => {
+    // footer for layouts that show New BB / Used BB right under the table: a legend dot for Amazon's offer on the left
+    // (only when Amazon has an offer in the FN column), "More offers" on the right
+    const fn = offers.find(c => c.k === 'FN');
+    const amz = fn && (fn.marks || []).find(m => m.underline);
+    return /*#__PURE__*/React.createElement("div", {
+      style: footCenter ? {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: footCenter === 'right' ? 'flex-end' : 'center',
+        gap: 18,
+        padding: footCenter === 'right' ? '10px 2px 2px' : '10px 4px 2px'
+      } : {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 4px 2px'
+      }
+    }, amz ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
+        paddingLeft: footCenter ? 0 : 6
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 4,
+        height: 4,
+        borderRadius: '50%',
+        background: typeof LSERIES !== 'undefined' ? LSERIES.amz.color : '#F0A23A',
+        flexShrink: 0
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 600,
+        color: typeof LSERIES !== 'undefined' ? LSERIES.amz.color : '#F0A23A',
+        fontSize: 12.5
+      }
+    }, "AMZ")) : footCenter ? null : /*#__PURE__*/React.createElement("span", null), footCenter && amz && /*#__PURE__*/React.createElement(PSTVPipe, null), /*#__PURE__*/React.createElement("div", {
+      className: "pstv-tap",
+      onClick: onMore,
+      style: {
+        height: 36,
+        padding: footCenter ? '0 2px' : '0 4px 0 10px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        fontSize: 13.5,
+        fontWeight: 600,
+        color: T.info,
+        cursor: 'pointer'
+      }
+    }, "More offers", /*#__PURE__*/React.createElement(PSChev, {
+      c: T.info,
+      size: 11
+    })));
+  })() : /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: 'repeat(3,1fr)',
@@ -48709,6 +50318,12 @@ function PSTVRound12({
           }
         }, titleOnly(tz, 600, {
           flex: '0 1 auto'
+        }), ctx.dotsAt === 'asinL' && /*#__PURE__*/React.createElement(PSTVDotsAt, {
+          r: r,
+          gap: 5,
+          style: {
+            flexShrink: 0
+          }
         }), /*#__PURE__*/React.createElement("span", {
           style: {
             flexShrink: 0,
@@ -48718,7 +50333,13 @@ function PSTVRound12({
             fontVariantNumeric: 'tabular-nums',
             whiteSpace: 'nowrap'
           }
-        }, r.asin), /*#__PURE__*/React.createElement("span", {
+        }, r.asin), ctx.dotsAt === 'asinR' && /*#__PURE__*/React.createElement(PSTVDotsAt, {
+          r: r,
+          gap: 5,
+          style: {
+            flexShrink: 0
+          }
+        }), /*#__PURE__*/React.createElement("span", {
           style: {
             flex: 1
           }
@@ -51113,10 +52734,17 @@ function PSTVRound4({
       left: '50%',
       transform: 'translateX(-50%)'
     }
-  }), t.ok && PSTV_CELEB[ctx.red] && /*#__PURE__*/React.createElement(PSTVCeleb, {
+  }), t.ok && (ctx.celeb ? ctx.celeb !== 'off' && ctx.celeb !== 'current' ? /*#__PURE__*/React.createElement(PSTVConfetti, {
+    key: ctx.celeb + (ctx.celebKey || 0),
+    mode: ctx.celeb,
+    color: t.color
+  }) : ctx.celeb === 'current' && /*#__PURE__*/React.createElement(PSTVCeleb, {
+    kind: "confettiSoft",
+    color: t.color
+  }) : PSTV_CELEB[ctx.red] && /*#__PURE__*/React.createElement(PSTVCeleb, {
     kind: PSTV_CELEB[ctx.red],
     color: t.color
-  }), PSTV_RED_SOFT[ctx.red] && t.rej && (() => {
+  })), PSTV_RED_SOFT[ctx.red] && t.rej && (() => {
     const q = PSTV_RED_SOFT[ctx.red],
       c = pstvRgba(t.color || (t.ok ? '#1B9E51' : '#E5484D'));
     return /*#__PURE__*/React.createElement("div", {
@@ -51256,7 +52884,9 @@ function PSTVRound4({
     selectedId: ctx.sel.id,
     onSelect: ctx.onSelect,
     onMore: ctx.onMore,
-    fixed: !!o.scrollPage
+    fixed: !!o.scrollPage,
+    foot: ctx.offersFoot,
+    footCenter: ctx.footCenter || false
   })));
 }
 const PSTV_VERSIONS = [{
@@ -51408,6 +53038,151 @@ const PSTV_VERSIONS = [{
     barBottom: true,
     dotsAt: 'tr',
     scrollPage: true
+  },
+  pageOnly: true
+}, {
+  id: 'e3016',
+  n: 'A16',
+  name: 'ASR unit a little larger, mid gray',
+  o: {
+    r4: 221,
+    bar: 45,
+    k12: 142,
+    topGap: 24,
+    gapStats: 26,
+    cardGap: 16,
+    ph: 'a1',
+    noFacts: true,
+    bindUnder: true,
+    trigDots: true,
+    red: 19,
+    inset: 8,
+    ts: true,
+    two: true,
+    cw: 62,
+    ch: 88,
+    rh: 44,
+    flagsBelow: true,
+    trigSize: 20,
+    trigWeight: 800,
+    blockH: 108,
+    metaSize: 14,
+    chevBig: true,
+    metaCaps: true,
+    modeStyle: 'code',
+    barBottom: true,
+    dotsAt: 'tr',
+    scrollPage: true,
+    asrUnit: 'a'
+  },
+  pageOnly: true
+}, {
+  id: 'e3017',
+  n: 'A17',
+  name: 'ASR unit bold and dark',
+  o: {
+    r4: 221,
+    bar: 45,
+    k12: 142,
+    topGap: 24,
+    gapStats: 26,
+    cardGap: 16,
+    ph: 'a1',
+    noFacts: true,
+    bindUnder: true,
+    trigDots: true,
+    red: 19,
+    inset: 8,
+    ts: true,
+    two: true,
+    cw: 62,
+    ch: 88,
+    rh: 44,
+    flagsBelow: true,
+    trigSize: 20,
+    trigWeight: 800,
+    blockH: 108,
+    metaSize: 14,
+    chevBig: true,
+    metaCaps: true,
+    modeStyle: 'code',
+    barBottom: true,
+    dotsAt: 'tr',
+    scrollPage: true,
+    asrUnit: 'b'
+  },
+  pageOnly: true
+}, {
+  id: 'e3018',
+  n: 'A18',
+  name: 'ASR unit as part of the number',
+  o: {
+    r4: 221,
+    bar: 45,
+    k12: 142,
+    topGap: 24,
+    gapStats: 26,
+    cardGap: 16,
+    ph: 'a1',
+    noFacts: true,
+    bindUnder: true,
+    trigDots: true,
+    red: 19,
+    inset: 8,
+    ts: true,
+    two: true,
+    cw: 62,
+    ch: 88,
+    rh: 44,
+    flagsBelow: true,
+    trigSize: 20,
+    trigWeight: 800,
+    blockH: 108,
+    metaSize: 14,
+    chevBig: true,
+    metaCaps: true,
+    modeStyle: 'code',
+    barBottom: true,
+    dotsAt: 'tr',
+    scrollPage: true,
+    asrUnit: 'c'
+  },
+  pageOnly: true
+}, {
+  id: 'e3019',
+  n: 'A19',
+  name: 'A16 · quieter stat labels, more air',
+  o: {
+    r4: 221,
+    bar: 45,
+    k12: 142,
+    topGap: 24,
+    gapStats: 26,
+    cardGap: 16,
+    ph: 'a1',
+    noFacts: true,
+    bindUnder: true,
+    trigDots: true,
+    red: 19,
+    inset: 8,
+    ts: true,
+    two: true,
+    cw: 62,
+    ch: 88,
+    rh: 44,
+    flagsBelow: true,
+    trigSize: 20,
+    trigWeight: 800,
+    blockH: 108,
+    metaSize: 14,
+    chevBig: true,
+    metaCaps: true,
+    modeStyle: 'code',
+    barBottom: true,
+    dotsAt: 'tr',
+    scrollPage: true,
+    asrUnit: 'a',
+    statSoft: true
   },
   pageOnly: true
 }, {
@@ -54093,6 +55868,19 @@ function PSTVLivePh({
 
 // Round 26 — stock and past sales as two small dots, centered just under the search bar (hidden when 0)
 // History dots placed freely (B series): blue = sold before, purple = in stock; nothing when neither.
+// thin vertical pipe (V2 offers footer: "• Amazon | More offers")
+function PSTVPipe() {
+  return /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    style: {
+      flexShrink: 0,
+      width: 1,
+      height: 15,
+      borderRadius: 1,
+      background: 'rgba(60,60,67,0.22)'
+    }
+  });
+}
 function PSTVDotsAt({
   r,
   size = 6,
@@ -54186,6 +55974,118 @@ const pstvRnd = (i, k) => {
   const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453;
   return x - Math.floor(x);
 };
+// Confetti that reads as confetti (not snow or rain): mixed colours and shapes, pieces that flutter
+// and flip as they move, and (for the burst kinds) a throw with gravity that plays once and ends.
+// Three nested spans per piece: travel, sway / gravity, and the flipping shape itself.
+const PSTV_CF_COL = ['#F2B705', '#5AC8FA', '#FF6B8A', '#A78BFA'];
+function PSTVConfetti({
+  mode,
+  color
+}) {
+  const box = {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 330,
+    overflow: 'hidden',
+    pointerEvents: 'none',
+    zIndex: -1
+  }; // behind the cover, the text and the cards
+  const R = pstvRnd,
+    N = (n, f) => Array.from({
+      length: n
+    }, (_, i) => f(i));
+  const col = i => i % 3 === 0 ? color : PSTV_CF_COL[i % 4];
+  const shape = (i, big) => {
+    const k = i % 4;
+    return k === 0 ? {
+      width: 5,
+      height: 5,
+      borderRadius: '50%'
+    } : k === 1 ? {
+      width: 3,
+      height: big ? 12 : 9,
+      borderRadius: 1.5
+    } : {
+      width: 5,
+      height: 7,
+      borderRadius: 1.25
+    };
+  };
+  const flip = (i, slow) => ({
+    display: 'block',
+    background: col(i),
+    '--rz': `${Math.round(R(i, 31) * 360)}deg`,
+    animation: `pstvCfFlip ${(slow ? 2.6 : 1.5) + R(i, 32) * 1.4}s linear ${-R(i, 33) * 2}s infinite`,
+    ...shape(i, slow)
+  });
+  if (mode === 'flutter' || mode === 'ribbons') {
+    const rib = mode === 'ribbons';
+    return /*#__PURE__*/React.createElement("div", {
+      style: box
+    }, N(rib ? 11 : 14, i => /*#__PURE__*/React.createElement("span", {
+      key: i,
+      style: {
+        position: 'absolute',
+        top: 0,
+        left: `${4 + R(i, 21) * 92}%`,
+        opacity: 0,
+        '--o': rib ? 0.3 : 0.26,
+        animation: `pstvCfFall ${(rib ? 9 : 7) + R(i, 22) * 3}s linear ${-R(i, 23) * 10}s infinite`
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'block',
+        '--sw': `${(rib ? 16 : 9) + R(i, 24) * 8}px`,
+        animation: `pstvCfSway ${(rib ? 2.4 : 1.5) + R(i, 25)}s ease-in-out ${-R(i, 26) * 2}s infinite alternate`
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        ...flip(i, rib),
+        ...(rib && i % 4 !== 0 ? {
+          width: 2.5,
+          height: 14,
+          borderRadius: 1.25
+        } : {})
+      }
+    })))));
+  }
+  // one-shot throws: 'burst' from the top centre, 'poppers' from the two top corners
+  const pop = mode === 'poppers';
+  return /*#__PURE__*/React.createElement("div", {
+    style: box
+  }, N(pop ? 28 : 26, i => {
+    const left = pop ? i % 2 ? '100%' : '0%' : '50%',
+      dir = pop ? i % 2 ? -1 : 1 : R(i, 41) < 0.5 ? -1 : 1;
+    const dx = dir * ((pop ? 30 : 14) + R(i, 42) * (pop ? 190 : 180)),
+      up = -(8 + R(i, 43) * (pop ? 80 : 46)),
+      dn = 110 + R(i, 44) * 170,
+      dur = 2.3 + R(i, 45) * 1.1,
+      del = R(i, 46) * 0.18;
+    return /*#__PURE__*/React.createElement("span", {
+      key: i,
+      style: {
+        position: 'absolute',
+        top: pop ? 96 : 62,
+        left,
+        opacity: 0,
+        '--o': 0.36,
+        '--dx': `${dx}px`,
+        animation: `pstvCfX ${dur}s cubic-bezier(.15,.6,.3,1) ${del}s both, pstvCfFade ${dur}s linear ${del}s both`
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'block',
+        '--up': `${up}px`,
+        '--dn': `${dn}px`,
+        animation: `pstvCfY ${dur}s linear ${del}s both`
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: flip(i)
+    })));
+  }));
+}
 function PSTVCeleb({
   kind,
   color
@@ -54198,8 +56098,9 @@ function PSTVCeleb({
     top: 0,
     height: 330,
     overflow: 'hidden',
-    pointerEvents: 'none'
-  };
+    pointerEvents: 'none',
+    zIndex: -1
+  }; // behind the cover, the text and the cards
   const N = (n, f) => Array.from({
     length: n
   }, (_, i) => f(i));
@@ -54466,7 +56367,7 @@ function PSTVScrollChips({
       borderBottom: '0.5px solid rgba(60,60,67,0.16)',
       opacity: e
     }
-  }), /*#__PURE__*/React.createElement(PSTVDotsAt, {
+  }), ctx.dotsAt === 'tr' && /*#__PURE__*/React.createElement(PSTVDotsAt, {
     r: r,
     style: {
       position: 'absolute',
@@ -54604,6 +56505,8 @@ function pstvOptCtx(o) {
     metaCaps: !!(V.o && V.o.metaCaps),
     modeStyle: V.o && V.o.modeStyle,
     dotsAt: V.o && V.o.dotsAt,
+    asrUnit: V.o && V.o.asrUnit,
+    statSoft: !!(V.o && V.o.statSoft),
     iosPress: !!(V.o && V.o.k12 === 142)
   };
 }
@@ -54885,6 +56788,12 @@ const PSTV_CSS = `
 @keyframes pstvHint{0%{opacity:.25}50%{opacity:1}100%{opacity:.25}}
 @keyframes pstvDot{0%{opacity:.3}50%{opacity:.75}100%{opacity:.3}}
 @keyframes pstvConfFall{0%{transform:translateY(-12px) rotate(0deg);opacity:0}12%{opacity:.32}80%{opacity:.22}100%{transform:translateY(330px) rotate(420deg);opacity:0}}
+@keyframes pstvCfFall{0%{transform:translateY(-14px);opacity:0}10%{opacity:var(--o)}62%{opacity:var(--o)}100%{transform:translateY(250px);opacity:0}}
+@keyframes pstvCfSway{0%{transform:translateX(calc(var(--sw) * -1))}100%{transform:translateX(var(--sw))}}
+@keyframes pstvCfFlip{0%{transform:rotateZ(var(--rz)) rotateX(0deg)}100%{transform:rotateZ(calc(var(--rz) + 160deg)) rotateX(720deg)}}
+@keyframes pstvCfX{0%{transform:translateX(0)}100%{transform:translateX(var(--dx))}}
+@keyframes pstvCfY{0%{transform:translateY(0);animation-timing-function:cubic-bezier(.2,.7,.4,1)}30%{transform:translateY(var(--up));animation-timing-function:cubic-bezier(.45,0,.9,.55)}100%{transform:translateY(var(--dn))}}
+@keyframes pstvCfFade{0%{opacity:0}6%{opacity:var(--o)}68%{opacity:var(--o)}100%{opacity:0}}
 @keyframes pstvConfSoft{0%{transform:translateY(-10px) rotate(0deg);opacity:0}12%{opacity:.2}45%{opacity:.16}82%{opacity:0}100%{transform:translateY(230px) rotate(300deg);opacity:0}}
 @keyframes pstvTwk{0%,100%{transform:scale(.3);opacity:0}50%{transform:scale(1);opacity:.42}}
 @keyframes pstvSheen{0%{transform:translateX(-200px) skewX(-18deg)}75%,100%{transform:translateX(480px) skewX(-18deg)}}
@@ -55237,8 +57146,19 @@ function PSTVPhone() {
   const [draft, setDraft] = React.useState({
     sc
   }); // menu choices, applied only by Apply
-  const onNew = React.useCallback(seed => setResult(pstvMakeResult(scRef.current, seed)), []);
+  const [seq, setSeq] = React.useState(0);
+  const onNew = React.useCallback(seed => {
+    setResult(pstvMakeResult(scRef.current, seed));
+    setSeq(n => n + 1);
+  }, []);
   const V = PSTV_VERSIONS.find(x => x.id === vid) || PSTV_VERSIONS[0];
+  // app mode (PSTV_PHONE.app): the phone shows the Main app's Pro Scan page ("New version" = V3 on Pro Scan Expanded)
+  const appMode = !!cfg.app && typeof ProScanPage !== 'undefined';
+  if (appMode) window.__bzTweaks = {
+    ...(window.__bzTweaks || {}),
+    proScanTop: 'a11',
+    proScanDots: 'asinR'
+  };
   if (window.PSTV_PHONE) window.PSTV_PHONE.onNewItem = () => onNew(); // the shuffle button at the far right of the bottom bar
   if (window.PSTV_PHONE) window.PSTV_PHONE.onMenu = () => {
     setDraft({
@@ -55250,6 +57170,7 @@ function PSTVPhone() {
     setSc(d.sc);
     scRef.current = d.sc;
     setResult(pstvMakeResult(d.sc));
+    setSeq(n => n + 1);
     setMenu(false);
   };
   const patch = p => setDraft(d => ({
@@ -55307,7 +57228,17 @@ function PSTVPhone() {
       overflow: 'hidden',
       fontFamily: PSTV_T.font
     }
-  }, /*#__PURE__*/React.createElement("style", null, PSTV_CSS), /*#__PURE__*/React.createElement(PSTVScreen, {
+  }, /*#__PURE__*/React.createElement("style", null, PSTV_CSS), appMode ? /*#__PURE__*/React.createElement("div", {
+    className: "pstv-app",
+    style: {
+      position: 'absolute',
+      inset: 0
+    }
+  }, /*#__PURE__*/React.createElement("style", null, '.pstv-app > div:first-of-type { height: 100%; }'), /*#__PURE__*/React.createElement(ProScanPage, {
+    key: 'app' + seq,
+    onClose: () => {},
+    initialResult: result
+  })) : /*#__PURE__*/React.createElement(PSTVScreen, {
     key: vid,
     V: V,
     result: result,
@@ -55407,7 +57338,7 @@ function PSTVPhone() {
   }, "Apply")))));
 }
 
-// PSTV_APP_TOP = the options of the version applied to the Main app (A14: A11 with the search bar at the bottom).
+// PSTV_APP_TOP = the options of the version applied to the Main app (the Main app's "New version" top design; currently A19).
 const PSTV_APP_TOP = {
   r4: 221,
   bar: 45,
@@ -55435,11 +57366,19 @@ const PSTV_APP_TOP = {
   metaCaps: true,
   modeStyle: 'code',
   barBottom: true,
-  dotsAt: 'tr'
+  dotsAt: 'tr',
+  scrollPage: true,
+  asrUnit: 'a',
+  statSoft: true
 };
 Object.assign(window, {
   PSTVRound4,
   PSTVTopBar,
+  PSTVScrollChips,
+  PSTVSeg,
+  PSTVToggle,
+  pstvMakeResult,
+  PSTV_VERDICTS,
   PSTV_CSS,
   PSTV_APP_TOP,
   pstvOptCtx
