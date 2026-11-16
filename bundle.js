@@ -1894,6 +1894,127 @@ function ProductThumb({
 // Every sheet shares this header so they read identically: a 36×5 grabber,
 // a centered display-font title, and a circular close button at the right
 // (plus an optional back button at the left for in-sheet sub-pages).
+// Unify pass #1 — the one header for every bottom sheet: centred title (20, bold), optional grey subtitle,
+// a white round back button on the left (sub-pages only) and a white round X on the right (every page)
+// Unify pass #2 — section label (card title above a card): uppercase grey, as on the Trigger page
+const BZ_LABEL = {
+  fontSize: 11.5,
+  fontWeight: 800,
+  letterSpacing: 0.4,
+  textTransform: 'uppercase',
+  color: '#AEAEB2'
+};
+// Unify pass #3 — selection: pick one → blue checkmark on the right (the whole row taps); on/off and pick several → switch
+function BzCheck({
+  on
+}) {
+  return /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 20,
+      flexShrink: 0,
+      display: 'inline-flex',
+      justifyContent: 'flex-end'
+    }
+  }, on && /*#__PURE__*/React.createElement("svg", {
+    width: "17",
+    height: "17",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#0A84FF",
+    strokeWidth: "3",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M5 12.5l4.5 4.5L19 7"
+  })));
+}
+const BZ_ROUND_BTN = {
+  position: 'absolute',
+  top: 14,
+  width: 34,
+  height: 34,
+  borderRadius: '50%',
+  background: '#fff',
+  border: 'none',
+  padding: 0,
+  boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 4px 12px rgba(15,15,20,0.10)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer'
+};
+function BzSheetHead({
+  title,
+  sub,
+  onBack,
+  onClose
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      flexShrink: 0,
+      padding: '14px 64px 12px',
+      minHeight: 34
+    }
+  }, onBack && /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    "aria-label": "Back",
+    style: {
+      ...BZ_ROUND_BTN,
+      left: 16
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "14",
+    height: "14",
+    viewBox: "0 0 16 16",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M10 3L5 8l5 5",
+    stroke: "#3A3A3C",
+    strokeWidth: "2.2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: TOKENS.fontDisplay,
+      fontSize: 20,
+      fontWeight: 700,
+      letterSpacing: -0.4,
+      lineHeight: '34px',
+      textAlign: 'center',
+      color: TOKENS.text,
+      whiteSpace: 'nowrap'
+    }
+  }, title), sub && /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginTop: 1,
+      fontSize: 13.5,
+      fontWeight: 500,
+      color: '#8E8E93',
+      textAlign: 'center'
+    }
+  }, sub), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    "aria-label": "Close",
+    style: {
+      ...BZ_ROUND_BTN,
+      right: 16
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "12",
+    height: "12",
+    viewBox: "0 0 14 14",
+    fill: "none",
+    stroke: "#3A3A3C",
+    strokeWidth: "2.2",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M2 2l10 10M12 2L2 12"
+  }))));
+}
 function SheetGrabber({
   onClose
 }) {
@@ -2024,6 +2145,9 @@ function SheetHeader({
   }))));
 }
 Object.assign(window, {
+  BzSheetHead,
+  BZ_LABEL,
+  BzCheck,
   BZ_TAB_EASE,
   bzFbmChip,
   bzCardShadow,
@@ -29861,13 +29985,7 @@ function CSSectionLabel({
       margin: "10px 0px"
     }
   }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11,
-      fontWeight: 700,
-      color: TOKENS.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5
-    }
+    style: BZ_LABEL
   }, children), right && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 12,
@@ -30196,27 +30314,6 @@ function BzRadioRow({
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      width: 20,
-      height: 20,
-      borderRadius: '50%',
-      flexShrink: 0,
-      boxSizing: 'border-box',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      border: on ? 'none' : '1.5px solid rgba(60,60,67,0.28)',
-      background: on ? TOKENS.info : 'transparent',
-      transition: 'background .15s'
-    }
-  }, on && /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: 8,
-      height: 8,
-      borderRadius: '50%',
-      background: '#fff'
-    }
-  })), /*#__PURE__*/React.createElement("span", {
-    style: {
       display: 'flex',
       flexDirection: 'column',
       gap: 1,
@@ -30237,7 +30334,9 @@ function BzRadioRow({
       fontWeight: 500,
       color: TOKENS.textTertiary
     }
-  }, hint)), lead);
+  }, hint)), lead, /*#__PURE__*/React.createElement(BzCheck, {
+    on: on
+  }));
 }
 // the trigger row's look on the scan page (V3): none (default) · light · solid
 function CSTrigBgSettings() {
@@ -31070,15 +31169,17 @@ function ResultsSheet({
   open,
   run,
   onClose,
-  focus
+  focus,
+  initPage
 }) {
+  // initPage: open on a sub-page (Bottom Sheet Versions)
   const isOpen = open && !!run;
   // page: { kind:'main'|'info'|'trigger'|'check', item? }
-  const [page, setPage] = React.useState({
+  const [page, setPage] = React.useState(initPage || {
     kind: 'main'
   });
   React.useEffect(() => {
-    if (!open) setPage({
+    if (!open) setPage(initPage || {
       kind: 'main'
     });
   }, [open]);
@@ -31133,77 +31234,12 @@ function ResultsSheet({
     }
   }, /*#__PURE__*/React.createElement(SheetGrabber, {
     onClose: onClose
+  }), /*#__PURE__*/React.createElement(BzSheetHead, {
+    title: headerTitle,
+    sub: headerSub,
+    onBack: onMain ? null : back,
+    onClose: onClose
   }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '6px 16px 12px',
-      minHeight: 40,
-      flexShrink: 0
-    }
-  }, !onMain && /*#__PURE__*/React.createElement("button", {
-    onClick: back,
-    "aria-label": "Back",
-    style: {
-      position: 'absolute',
-      left: 16,
-      top: '50%',
-      transform: 'translateY(-50%)',
-      width: 40,
-      height: 40,
-      borderRadius: '50%',
-      border: '1px solid rgba(60,60,67,0.08)',
-      cursor: 'pointer',
-      padding: 0,
-      color: TOKENS.text,
-      background: 'linear-gradient(180deg, #FFFFFF 0%, oklch(0.99 0.005 278) 100%)',
-      boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 6px 16px rgba(15,15,20,0.10)',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "12",
-    height: "18",
-    viewBox: "0 0 12 18",
-    fill: "none",
-    style: {
-      position: 'relative',
-      left: -1
-    }
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M10 1L2 9l8 8",
-    stroke: "currentColor",
-    strokeWidth: "2.4",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }))), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: TOKENS.fontDisplay,
-      fontSize: 18,
-      fontWeight: 700,
-      letterSpacing: -0.4,
-      color: TOKENS.text
-    }
-  }, headerTitle), headerSub && /*#__PURE__*/React.createElement("span", {
-    style: {
-      marginTop: 2,
-      fontSize: 12.5,
-      fontWeight: 500,
-      color: TOKENS.textSecondary
-    }
-  }, headerSub), onMain && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      right: 16,
-      top: 14
-    }
-  }, /*#__PURE__*/React.createElement(CSClose, {
-    onClick: onClose
-  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       minHeight: 0,
@@ -34408,7 +34444,12 @@ function useKeepaChart(opts) {
     onExpand: () => setFullScreen(true),
     onSettings: () => setSettingsOpen(true)
   });
-  const overlay = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(KeepaSettingsSheet, {
+  const overlay = /*#__PURE__*/React.createElement(React.Fragment, null, opts && opts.bzFinal && window.BzFinalSheet /* Main app V3: the final Chart settings sheet */ ? /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "chart",
+    open: settingsOpen,
+    onClose: () => setSettingsOpen(false),
+    keepa: ext
+  }) : /*#__PURE__*/React.createElement(KeepaSettingsSheet, {
     open: settingsOpen,
     onClose: () => setSettingsOpen(false),
     ext: ext,
@@ -36378,11 +36419,13 @@ function PSAsrSheet({
   open,
   onClose,
   asr,
-  nonBook
+  nonBook,
+  initPage
 }) {
-  const [page, setPage] = React.useState('main');
+  // initPage: open on a sub-page (Bottom Sheet Versions)
+  const [page, setPage] = React.useState(initPage || 'main');
   React.useEffect(() => {
-    if (open) setPage('main');
+    if (open) setPage(initPage || 'main');
   }, [open]);
   const rankNum = asr || 524000;
   const rank = asr ? psRank(asr) : '524K';
@@ -36396,15 +36439,10 @@ function PSAsrSheet({
   const pct = Math.max(0.05, Math.min(0.96, Math.log(Math.max(rankNum, 1)) / Math.log(1500000)));
   const asrSummary = 'A dependable 6-month average — the rank to trust.';
   const srSummary = 'Amazon’s live rank — a quick glance, but it swings a lot.';
-  const eyebrow = (t, c) => /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11.5,
-      fontWeight: 800,
-      letterSpacing: 0.6,
-      textTransform: 'uppercase',
-      color: c
-    }
-  }, t);
+  const eyebrow = t => /*#__PURE__*/React.createElement("div", {
+    style: BZ_LABEL
+  }, t); // Unify #2: one grey label
+
   const mainBody = /*#__PURE__*/React.createElement(React.Fragment, null, nonBook && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
@@ -36749,77 +36787,11 @@ function PSAsrSheet({
       background: 'rgba(60,60,67,0.22)',
       margin: '0 auto'
     }
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '14px 22px 12px',
-      flexShrink: 0
-    }
-  }, page === 'detail' ? /*#__PURE__*/React.createElement("div", {
-    onClick: () => setPage('main'),
-    style: {
-      position: 'absolute',
-      left: 14,
-      width: 34,
-      height: 34,
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: TOKENS.surface,
-      boxShadow: '0 1px 2px rgba(15,15,20,0.10), 0 4px 12px rgba(15,15,20,0.08)',
-      cursor: 'pointer'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "15",
-    height: "15",
-    viewBox: "0 0 16 16",
-    fill: "none"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M10 3L5 8l5 5",
-    stroke: txt,
-    strokeWidth: "2.2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }))) : null, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: TOKENS.fontDisplay,
-      fontSize: 20,
-      fontWeight: 700,
-      letterSpacing: -0.4,
-      whiteSpace: 'nowrap'
-    }
-  }, page === 'detail' ? 'Reading the ranks' : 'Sales Rank & ASR'), page === 'main' ? /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    style: {
-      position: 'absolute',
-      right: 18,
-      top: '50%',
-      transform: 'translateY(-50%)',
-      width: 30,
-      height: 30,
-      borderRadius: '50%',
-      border: 'none',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'rgba(60,60,67,0.10)'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "14",
-    height: "14",
-    viewBox: "0 0 14 14",
-    fill: "none",
-    stroke: sub,
-    strokeWidth: "2",
-    strokeLinecap: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M2 2l10 10M12 2L2 12"
-  }))) : null), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(BzSheetHead, {
+    title: page === 'detail' ? 'Reading the ranks' : 'ASR',
+    onBack: page === 'detail' ? () => setPage('main') : null,
+    onClose: onClose
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       overflowY: 'auto',
       padding: '2px 16px 28px'
@@ -36889,11 +36861,12 @@ const PS_SD_STATES = [{
 function PSSoldDaysSheet({
   open,
   onClose,
-  soldDays
+  soldDays,
+  initPage
 }) {
-  const [page, setPage] = React.useState('main');
+  const [page, setPage] = React.useState(initPage || 'main');
   React.useEffect(() => {
-    if (open) setPage('main');
+    if (open) setPage(initPage || 'main');
   }, [open]);
   const val = soldDays != null ? soldDays : 17;
   const BLUE = '#3E63DD',
@@ -36909,15 +36882,9 @@ function PSSoldDaysSheet({
     wSoft = band.soft;
   const pct = Math.min(0.96, Math.max(0.04, val / PS_SD_MAX));
   const summary = 'How many days this item sold in the last 6 months — a steady read on demand.';
-  const eyebrow = (t, c) => /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11.5,
-      fontWeight: 800,
-      letterSpacing: 0.6,
-      textTransform: 'uppercase',
-      color: c
-    }
-  }, t);
+  const eyebrow = t => /*#__PURE__*/React.createElement("div", {
+    style: BZ_LABEL
+  }, t); // Unify #2: one grey label
   const R = 82,
     CX = 100,
     CY = 96,
@@ -37194,77 +37161,11 @@ function PSSoldDaysSheet({
       background: 'rgba(60,60,67,0.22)',
       margin: '0 auto'
     }
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '14px 22px 12px',
-      flexShrink: 0
-    }
-  }, page === 'detail' ? /*#__PURE__*/React.createElement("div", {
-    onClick: () => setPage('main'),
-    style: {
-      position: 'absolute',
-      left: 14,
-      width: 34,
-      height: 34,
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: TOKENS.surface,
-      boxShadow: '0 1px 2px rgba(15,15,20,0.10), 0 4px 12px rgba(15,15,20,0.08)',
-      cursor: 'pointer'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "15",
-    height: "15",
-    viewBox: "0 0 16 16",
-    fill: "none"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M10 3L5 8l5 5",
-    stroke: txt,
-    strokeWidth: "2.2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }))) : null, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: TOKENS.fontDisplay,
-      fontSize: 20,
-      fontWeight: 700,
-      letterSpacing: -0.4,
-      whiteSpace: 'nowrap'
-    }
-  }, page === 'detail' ? 'How Sold Days works' : 'Sold Days'), page === 'main' ? /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    style: {
-      position: 'absolute',
-      right: 18,
-      top: '50%',
-      transform: 'translateY(-50%)',
-      width: 30,
-      height: 30,
-      borderRadius: '50%',
-      border: 'none',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'rgba(60,60,67,0.10)'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "14",
-    height: "14",
-    viewBox: "0 0 14 14",
-    fill: "none",
-    stroke: sub,
-    strokeWidth: "2",
-    strokeLinecap: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M2 2l10 10M12 2L2 12"
-  }))) : null), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(BzSheetHead, {
+    title: page === 'detail' ? 'How Sold Days works' : 'Sold Days',
+    onBack: page === 'detail' ? () => setPage('main') : null,
+    onClose: onClose
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       overflowY: 'auto',
       padding: '2px 16px 28px'
@@ -37356,7 +37257,8 @@ function PSProfitSheet({
   asin,
   sellDefault,
   pref,
-  onChangePref
+  onChangePref,
+  initPage
 }) {
   const BLUE = '#3E63DD',
     PFO = PS_ORANGE;
@@ -37369,7 +37271,7 @@ function PSProfitSheet({
   // prefill Sell For from the selected offer each time the sheet opens
   React.useEffect(() => {
     if (open) {
-      setPage('main');
+      setPage(initPage || 'main');
       setSell(sellDefault != null ? sellDefault.toFixed(2) : '24.99');
     }
   }, [open, sellDefault]);
@@ -37553,80 +37455,12 @@ function PSProfitSheet({
       background: 'rgba(60,60,67,0.22)',
       margin: '0 auto'
     }
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      textAlign: 'center',
-      padding: '12px 22px 12px',
-      flexShrink: 0
-    }
-  }, onPref && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setPage('main'),
-    style: {
-      position: 'absolute',
-      left: 14,
-      top: 8,
-      width: 32,
-      height: 32,
-      borderRadius: '50%',
-      border: 'none',
-      cursor: 'pointer',
-      background: 'rgba(60,60,67,0.08)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "15",
-    height: "15",
-    viewBox: "0 0 16 16",
-    fill: "none",
-    stroke: sub,
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M10 3L5 8l5 5"
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: TOKENS.fontDisplay,
-      fontSize: 19,
-      fontWeight: 700,
-      letterSpacing: -0.3
-    }
-  }, onPref ? 'Profit display' : 'Profit analysis'), onPref && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: ter,
-      marginTop: 2
-    }
-  }, "Which costs to show on the scan screen"), !onPref && /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    style: {
-      position: 'absolute',
-      right: 18,
-      top: 10,
-      width: 30,
-      height: 30,
-      borderRadius: '50%',
-      border: 'none',
-      cursor: 'pointer',
-      background: 'rgba(60,60,67,0.10)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "14",
-    height: "14",
-    viewBox: "0 0 14 14",
-    fill: "none",
-    stroke: sub,
-    strokeWidth: "2",
-    strokeLinecap: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M2 2l10 10M12 2L2 12"
-  })))), onPref ? /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(BzSheetHead, {
+    title: onPref ? 'Profit display' : 'Profit',
+    sub: onPref ? 'Which costs to show on the scan screen' : null,
+    onBack: onPref ? () => setPage('main') : null,
+    onClose: onClose
+  }), onPref ? /*#__PURE__*/React.createElement("div", {
     style: {
       overflowY: 'auto',
       padding: '0 16px 28px'
@@ -37655,7 +37489,7 @@ function PSProfitSheet({
         textAlign: 'left',
         border: 'none',
         cursor: 'pointer',
-        background: on ? 'rgba(62,99,221,0.05)' : '#fff',
+        background: '#fff',
         display: 'flex',
         gap: 12,
         alignItems: 'flex-start',
@@ -37663,30 +37497,6 @@ function PSProfitSheet({
         borderTop: i ? `1px solid ${TOKENS.divider}` : 'none'
       }
     }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        width: 21,
-        height: 21,
-        borderRadius: '50%',
-        flexShrink: 0,
-        marginTop: 1,
-        border: `2px solid ${on ? BLUE : 'rgba(60,60,67,0.3)'}`,
-        background: on ? BLUE : 'transparent',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }
-    }, on && /*#__PURE__*/React.createElement("svg", {
-      width: "11",
-      height: "11",
-      viewBox: "0 0 12 12",
-      fill: "none",
-      stroke: "#fff",
-      strokeWidth: "2.4",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }, /*#__PURE__*/React.createElement("path", {
-      d: "M2.5 6.2l2.3 2.3 4.7-5"
-    }))), /*#__PURE__*/React.createElement("span", {
       style: {
         flex: 1
       }
@@ -37711,7 +37521,13 @@ function PSProfitSheet({
         color: sub,
         marginTop: 4
       }
-    }, d)));
+    }, d)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        marginTop: 1
+      }
+    }, /*#__PURE__*/React.createElement(BzCheck, {
+      on: on
+    })));
   }))) : /*#__PURE__*/React.createElement("div", {
     style: {
       overflowY: 'auto',
@@ -41175,7 +40991,8 @@ function ProScanPage({
     psSetSearchMode(m);
   };
   const keepa = useKeepaChart({
-    rangeInSettings: !!(layoutOpts && layoutOpts.zone8)
+    rangeInSettings: !!(layoutOpts && layoutOpts.zone8),
+    bzFinal: !layoutOptsIn && tw.proScanTop === 'v3'
   });
   const sbyb = usePSBuyback();
   // Profit-display preference (By channel / Always FBA / Always FBM) — persisted.
@@ -41637,7 +41454,70 @@ function ProScanPage({
     mode: searchMode,
     onChangeMode: changeSearchMode,
     onRenew: renewSearch
-  }), /*#__PURE__*/React.createElement(BookDetailsSheet, {
+  }), v3 && window.BzFinalSheet ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "product",
+    open: detailsOpen && !!result,
+    r: result,
+    onClose: () => setDetailsOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "triggers",
+    open: resultsOpen && !!result && resultsFocus === 'onlyTriggers',
+    r: result,
+    onClose: () => setResultsOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "checks",
+    open: resultsOpen && !!result && resultsFocus === 'onlyChecks',
+    r: result,
+    onClose: () => setResultsOpen(false)
+  }), /*#__PURE__*/React.createElement(ResultsSheet, {
+    open: resultsOpen && !!result && resultsFocus !== 'onlyTriggers' && resultsFocus !== 'onlyChecks',
+    run: result && result.run,
+    focus: resultsFocus,
+    onClose: () => setResultsOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "stock",
+    open: showAll === 'listings' && !!result,
+    r: result,
+    onClose: () => setShowAll(null)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "pastsales",
+    open: showAll === 'pastSales' && !!result,
+    r: result,
+    onClose: () => setShowAll(null)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "search",
+    open: searchOpen,
+    r: result,
+    onClose: () => setSearchOpen(false),
+    onSubmit: runSearch,
+    searchMode: searchMode,
+    onChangeMode: changeSearchMode
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "sold",
+    open: statSheet === 'soldDays' && !!result,
+    r: result,
+    onClose: () => setStatSheet(null)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "alloffers",
+    open: allOffersOpen && !!result,
+    r: result,
+    selectedId: sel ? sel.id : null,
+    onSelect: (id, price) => setSel({
+      id,
+      price
+    }),
+    onClose: () => setAllOffersOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "offset",
+    open: offSetOpen,
+    r: result,
+    onClose: () => setOffSetOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "sales",
+    open: salesOpen && !!result,
+    r: result,
+    onClose: () => setSalesOpen(false)
+  })) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(BookDetailsSheet, {
     open: detailsOpen && !!result,
     result: result,
     onClose: () => setDetailsOpen(false)
@@ -41657,21 +41537,9 @@ function ProScanPage({
     onSubmit: runSearch,
     searchMode: searchMode,
     onChangeMode: changeSearchMode
-  }), keepa.overlay, /*#__PURE__*/React.createElement(PSAsrSheet, {
-    open: statSheet === 'asr',
-    asr: result ? result.asr : 0,
-    nonBook: a11 && result && result.category !== 'Book' ? result.amazonCategory || true : false,
-    onClose: () => setStatSheet(null)
   }), /*#__PURE__*/React.createElement(PSSoldDaysSheet, {
     open: statSheet === 'soldDays',
     soldDays: result ? result.soldDays : null,
-    onClose: () => setStatSheet(null)
-  }), /*#__PURE__*/React.createElement(PSProfitSheet, {
-    open: statSheet === 'profit',
-    asin: result ? result.asin : '',
-    sellDefault: sel ? sel.price : null,
-    pref: profitPref,
-    onChangePref: changeProfitPref,
     onClose: () => setStatSheet(null)
   }), /*#__PURE__*/React.createElement(PSAllOffersSheet, {
     open: allOffersOpen && !!result,
@@ -41689,6 +41557,18 @@ function ProScanPage({
     open: salesOpen && !!result,
     result: result,
     onClose: () => setSalesOpen(false)
+  })), keepa.overlay, /*#__PURE__*/React.createElement(PSAsrSheet, {
+    open: statSheet === 'asr',
+    asr: result ? result.asr : 0,
+    nonBook: a11 && result && result.category !== 'Book' ? result.amazonCategory || true : false,
+    onClose: () => setStatSheet(null)
+  }), /*#__PURE__*/React.createElement(PSProfitSheet, {
+    open: statSheet === 'profit',
+    asin: result ? result.asin : '',
+    sellDefault: sel ? sel.price : null,
+    pref: profitPref,
+    onChangePref: changeProfitPref,
+    onClose: () => setStatSheet(null)
   }), layoutOpts && layoutOpts.r24 ? /*#__PURE__*/React.createElement(PSCamPage, {
     open: cameraOpen,
     result: result,
@@ -43271,7 +43151,8 @@ function PSCamPage({
   // your stock / past sales and the chart load 3 s after each scan, as on the Pro Scan page
   const [histState, setHistState] = React.useState('pending');
   const keepa = useKeepaChart({
-    rangeInSettings: true
+    rangeInSettings: true,
+    bzFinal: !!(window.__bzTweaks && window.__bzTweaks.proScanTop === 'v3') && !!(v && v.main)
   });
   const sbyb = usePSBuyback();
   React.useEffect(() => {
@@ -43760,7 +43641,62 @@ function PSCamPage({
       strokeLinecap: "round",
       strokeLinejoin: "round"
     })))));
-  })(), /*#__PURE__*/React.createElement("style", null, '@keyframes psc-pillin2{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}'), /*#__PURE__*/React.createElement(BookDetailsSheet, {
+  })(), /*#__PURE__*/React.createElement("style", null, '@keyframes psc-pillin2{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}'), camV3 && window.BzFinalSheet ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "product",
+    open: detailsOpen,
+    r: result,
+    onClose: () => setDetailsOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "triggers",
+    open: resultsOpen && resultsFocus === 'onlyTriggers',
+    r: result,
+    onClose: () => setResultsOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "checks",
+    open: resultsOpen && resultsFocus === 'onlyChecks',
+    r: result,
+    onClose: () => setResultsOpen(false)
+  }), /*#__PURE__*/React.createElement(ResultsSheet, {
+    open: resultsOpen && resultsFocus !== 'onlyTriggers' && resultsFocus !== 'onlyChecks',
+    run: result.run,
+    focus: resultsFocus,
+    onClose: () => setResultsOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "alloffers",
+    open: allOffersOpen,
+    r: result,
+    selectedId: sel ? sel.id : null,
+    onSelect: (id, price) => setSel({
+      id,
+      price
+    }),
+    onClose: () => setAllOffersOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "offset",
+    open: offSetOpen,
+    r: result,
+    onClose: () => setOffSetOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "sales",
+    open: salesOpen,
+    r: result,
+    onClose: () => setSalesOpen(false)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "stock",
+    open: showAll === 'listings',
+    r: result,
+    onClose: () => setShowAll(null)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "pastsales",
+    open: showAll === 'pastSales',
+    r: result,
+    onClose: () => setShowAll(null)
+  }), /*#__PURE__*/React.createElement(window.BzFinalSheet, {
+    id: "sold",
+    open: statSheet === 'soldDays',
+    r: result,
+    onClose: () => setStatSheet(null)
+  })) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(BookDetailsSheet, {
     open: detailsOpen,
     result: result,
     onClose: () => setDetailsOpen(false)
@@ -43785,19 +43721,19 @@ function PSCamPage({
     open: salesOpen,
     result: result,
     onClose: () => setSalesOpen(false)
-  }), keepa.overlay, /*#__PURE__*/React.createElement(ShowAllSheet, {
+  }), /*#__PURE__*/React.createElement(ShowAllSheet, {
     open: showAll === 'listings' || showAll === 'pastSales',
     kind: showAll,
     order: order,
     onClose: () => setShowAll(null)
-  }), /*#__PURE__*/React.createElement(PSAsrSheet, {
-    open: statSheet === 'asr',
-    asr: result.asr,
-    nonBook: result.category !== 'Book' ? result.amazonCategory || true : false,
-    onClose: () => setStatSheet(null)
   }), /*#__PURE__*/React.createElement(PSSoldDaysSheet, {
     open: statSheet === 'soldDays',
     soldDays: result.soldDays,
+    onClose: () => setStatSheet(null)
+  })), keepa.overlay, /*#__PURE__*/React.createElement(PSAsrSheet, {
+    open: statSheet === 'asr',
+    asr: result.asr,
+    nonBook: result.category !== 'Book' ? result.amazonCategory || true : false,
     onClose: () => setStatSheet(null)
   }), /*#__PURE__*/React.createElement(PSProfitSheet, {
     open: statSheet === 'profit',
@@ -45609,7 +45545,8 @@ function SVKeyboard({
 function SVHistPage({
   open,
   onBack,
-  onPick
+  onPick,
+  onClose
 }) {
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -45630,52 +45567,13 @@ function SVHistPage({
       transition: 'transform 0.28s cubic-bezier(0.32,0.72,0,1)',
       pointerEvents: open ? 'auto' : 'none'
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: 60,
-      padding: '0 16px',
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    onClick: onBack,
-    style: {
-      position: 'absolute',
-      left: 12,
-      width: 38,
-      height: 38,
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: TOKENS.surface,
-      boxShadow: '0 1px 2px rgba(15,15,20,0.10), 0 4px 12px rgba(15,15,20,0.08)',
-      cursor: 'pointer',
-      WebkitTapHighlightColor: 'transparent'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "15",
-    height: "15",
-    viewBox: "0 0 16 16",
-    fill: "none"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M10 3L5 8l5 5",
-    stroke: TOKENS.text,
-    strokeWidth: "2.2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: TOKENS.fontDisplay,
-      fontSize: 19,
-      fontWeight: 700,
-      letterSpacing: -0.3,
-      whiteSpace: 'nowrap'
-    }
-  }, "Recent searches")), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(SheetGrabber, {
+    onClose: onClose
+  }), /*#__PURE__*/React.createElement(BzSheetHead, {
+    title: "Recent searches",
+    onBack: onBack,
+    onClose: onClose
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       minHeight: 0,
@@ -45770,17 +45668,19 @@ function SearchSheet({
   onClose,
   onSubmit,
   searchMode,
-  onChangeMode
+  onChangeMode,
+  initHist
 }) {
+  // initHist: open on the History sub-page (Bottom Sheet Versions)
   const [plane, setPlane] = React.useState('num'); // 'num' (ISBN) | 'abc' (Title)
   const [q, setQ] = React.useState('');
-  const [hist, setHist] = React.useState(false);
+  const [hist, setHist] = React.useState(!!initHist);
   const [pop, setPop] = React.useState(false);
   React.useEffect(() => {
     if (open) {
       setPlane('num');
       setQ('');
-      setHist(false);
+      setHist(!!initHist);
       setPop(false);
     }
   }, [open]);
@@ -45906,7 +45806,8 @@ function SearchSheet({
   }), /*#__PURE__*/React.createElement(SVHistPage, {
     open: hist,
     onBack: () => setHist(false),
-    onPick: pickRecent
+    onPick: pickRecent,
+    onClose: onClose
   })));
 }
 Object.assign(window, {
@@ -48989,16 +48890,18 @@ function PSTVRecentSalesSheet({
 }
 function PSTVOffersSettingsSheet({
   open,
-  onClose
+  onClose,
+  initPage
 }) {
+  // initPage: 'left' | 'rows' (Bottom Sheet Versions)
   const T = window.TOKENS;
   const [left, setLeft] = window.useBzPref(PSTV_OFF_LEFT_KEY, PSTV_OFF_LEFT_DEF);
   const [rows, setRows] = window.useBzPref('offersRows', '3');
   const [scroll, setScroll] = window.useBzPref('offersScroll', 'off');
-  const [page, setPage] = React.useState(null); // null | 'left' | 'rows'
+  const [page, setPage] = React.useState(initPage || null); // null | 'left' | 'rows'
   React.useEffect(() => {
     if (!open) {
-      const id = setTimeout(() => setPage(null), 300);
+      const id = setTimeout(() => setPage(initPage || null), 300);
       return () => clearTimeout(id);
     }
   }, [open]);
@@ -49089,82 +48992,11 @@ function PSTVOffersSettingsSheet({
       background: 'rgba(60,60,67,0.22)',
       margin: '0 auto'
     }
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '14px 22px 12px',
-      minHeight: 30
-    }
-  }, page && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setPage(null),
-    "aria-label": "Back",
-    style: {
-      position: 'absolute',
-      left: 16,
-      top: '50%',
-      transform: 'translateY(-50%)',
-      width: 36,
-      height: 36,
-      borderRadius: '50%',
-      border: '1px solid rgba(60,60,67,0.08)',
-      cursor: 'pointer',
-      padding: 0,
-      color: T.text,
-      background: '#fff',
-      boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 6px 16px rgba(15,15,20,0.10)',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "10",
-    height: "16",
-    viewBox: "0 0 12 18",
-    fill: "none"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M10 1L2 9l8 8",
-    stroke: "currentColor",
-    strokeWidth: "2.4",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }))), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: T.fontDisplay,
-      fontSize: 20,
-      fontWeight: 700,
-      letterSpacing: -0.4
-    }
-  }, title), !page && /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    style: {
-      position: 'absolute',
-      right: 18,
-      top: '50%',
-      transform: 'translateY(-50%)',
-      width: 30,
-      height: 30,
-      borderRadius: '50%',
-      border: 'none',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'rgba(60,60,67,0.10)'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "14",
-    height: "14",
-    viewBox: "0 0 14 14",
-    fill: "none",
-    stroke: T.textSecondary,
-    strokeWidth: "2",
-    strokeLinecap: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M2 2l10 10M12 2L2 12"
-  })))), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(BzSheetHead, {
+    title: title,
+    onBack: page ? () => setPage(null) : null,
+    onClose: onClose
+  }), /*#__PURE__*/React.createElement("div", {
     key: page || 'main',
     style: {
       padding: '0 16px 28px',
@@ -60759,3 +60591,6962 @@ if (!window.PSTV_EMBED) {
   const pstvRoot = ReactDOM.createRoot(document.getElementById('root'));
   pstvRoot.render(window.PSTV_PHONE ? /*#__PURE__*/React.createElement(PSTVPhone, null) : /*#__PURE__*/React.createElement(PSTVGallery, null));
 };
+// bottom-sheet-variants.jsx — new versions (A, B) of every Pro Scan bottom sheet, for the "Bottom Sheet Versions" page.
+// Shared direction: fewer pills, badges and capital-letter labels; one clear main thing per sheet; details second.
+// Each version is a static design (taps change local state only) built from the same item data as "Now".
+
+const BV = window.TOKENS;
+const bvMoney = x => (x < 0 ? '−$' : '$') + Math.abs(x).toFixed(2);
+const bvCard = {
+  background: '#fff',
+  borderRadius: 20,
+  boxShadow: '0 1px 2px rgba(15,15,20,0.04)'
+};
+const bvLabel = (t, x) => /*#__PURE__*/React.createElement("div", {
+  style: {
+    ...BZ_LABEL,
+    margin: '18px 4px 8px',
+    ...x
+  }
+}, t);
+const bvHair = `1px solid ${BV.divider}`;
+const BV_GREEN = '#16A34A',
+  BV_ORANGE = '#C2410C',
+  BV_RED = '#E5484D';
+
+// sheet shell (same on every version): grabber; title (and subtitle) centred; the close X as a white round button
+// in the top-right corner; any extra header control (e.g. "How it works") goes top-left
+// Live mode: inside the Main app the final sheets get open / close from BV_LIVE (see BzFinalSheet at the end of the file)
+const BV_LIVE = React.createContext(null);
+const bvLiveBg = L => L ? {
+  opacity: L.shown ? 1 : 0,
+  transition: 'opacity 0.28s ease',
+  pointerEvents: L.shown ? 'auto' : 'none'
+} : null;
+const bvLiveSheet = L => L ? {
+  transform: L.shown ? 'translateY(0)' : 'translateY(100%)',
+  transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)'
+} : null;
+const bvBack = onClick => /*#__PURE__*/React.createElement("span", {
+  onClick: onClick,
+  style: {
+    width: 34,
+    height: 34,
+    borderRadius: '50%',
+    background: '#fff',
+    boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 4px 12px rgba(15,15,20,0.10)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer'
+  }
+}, /*#__PURE__*/React.createElement("svg", {
+  width: "14",
+  height: "14",
+  viewBox: "0 0 16 16",
+  fill: "none"
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M10 3L5 8l5 5",
+  stroke: "#3A3A3C",
+  strokeWidth: "2.2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round"
+})));
+function BVSheet({
+  title,
+  sub,
+  children,
+  maxH = '84%',
+  lead,
+  right,
+  bare
+}) {
+  const L = React.useContext(BV_LIVE);
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    onClick: L ? L.onClose : undefined,
+    style: {
+      position: 'absolute',
+      inset: 0,
+      zIndex: 44,
+      background: 'rgba(0,0,0,0.42)',
+      ...bvLiveBg(L)
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 45,
+      maxHeight: maxH,
+      display: 'flex',
+      flexDirection: 'column',
+      background: BV.sheetBg,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      boxShadow: bzSheetShadow(),
+      color: BV.text,
+      fontFamily: BV.font,
+      WebkitFontSmoothing: 'antialiased',
+      overflow: 'hidden',
+      ...bvLiveSheet(L)
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: L ? L.onClose : undefined,
+    style: {
+      padding: '10px 0 0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 36,
+      height: 5,
+      borderRadius: 999,
+      background: 'rgba(60,60,67,0.22)',
+      margin: '0 auto'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      flexDirection: 'column',
+      flexShrink: 0,
+      ...(title || sub || lead ? {
+        padding: '14px 64px 12px',
+        minHeight: 34
+      } : {
+        height: 0,
+        zIndex: 2
+      })
+    }
+  }, lead, title && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 20,
+      fontWeight: 700,
+      letterSpacing: -0.4,
+      lineHeight: '34px',
+      textAlign: 'center'
+    }
+  }, title), sub && /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginTop: 1,
+      fontSize: 13.5,
+      fontWeight: 500,
+      color: '#8E8E93',
+      textAlign: 'center'
+    }
+  }, sub), right && /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: 16,
+      top: 14,
+      height: 34,
+      display: 'flex',
+      alignItems: 'center'
+    }
+  }, right), /*#__PURE__*/React.createElement("span", {
+    onClick: L ? L.onClose : undefined,
+    style: {
+      position: 'absolute',
+      right: 16,
+      top: 14,
+      width: 34,
+      height: 34,
+      borderRadius: '50%',
+      background: '#fff',
+      boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 4px 12px rgba(15,15,20,0.10)',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "12",
+    height: "12",
+    viewBox: "0 0 14 14",
+    fill: "none",
+    stroke: "#3A3A3C",
+    strokeWidth: "2.2",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M2 2l10 10M12 2L2 12"
+  })))), bare ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minHeight: 0,
+      display: 'flex',
+      flexDirection: 'column'
+    }
+  }, children) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowY: 'auto',
+      padding: '2px 16px 30px'
+    }
+  }, children)));
+}
+const bvIcon = {
+  ok: (s = 20, c = BV_GREEN) => /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: s,
+      height: s,
+      borderRadius: '50%',
+      background: c,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: s * 0.55,
+    height: s * 0.55,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#fff",
+    strokeWidth: "3.6",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M5 12.5l4.5 4.5L19 7"
+  }))),
+  no: (s = 20) => /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: s,
+      height: s,
+      borderRadius: '50%',
+      border: '1.8px solid #C7C7CC',
+      boxSizing: 'border-box',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: s * 0.42,
+    height: s * 0.42,
+    viewBox: "0 0 12 12",
+    fill: "none",
+    stroke: "#AEAEB2",
+    strokeWidth: "2.2",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M2 2l8 8M10 2l-8 8"
+  }))),
+  skip: (s = 20) => /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: s,
+      height: s,
+      borderRadius: '50%',
+      border: '1.8px dashed #D1D1D6',
+      boxSizing: 'border-box',
+      flexShrink: 0
+    }
+  }),
+  warn: (s = 16, c = BV_ORANGE) => /*#__PURE__*/React.createElement("svg", {
+    width: s,
+    height: s,
+    viewBox: "0 0 24 22",
+    fill: "none",
+    style: {
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M10.3 2.6a2 2 0 0 1 3.4 0l8.7 15.1A2 2 0 0 1 20.7 21H3.3a2 2 0 0 1-1.7-3.3L10.3 2.6z",
+    fill: c
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 8.5v5",
+    stroke: "#fff",
+    strokeWidth: "2.2",
+    strokeLinecap: "round"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "17",
+    r: "1.25",
+    fill: "#fff"
+  })),
+  chev: (c = '#C7C7CC') => /*#__PURE__*/React.createElement("svg", {
+    width: "7",
+    height: "12",
+    viewBox: "0 0 8 13",
+    fill: "none",
+    style: {
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M1 1l6 5.5L1 12",
+    stroke: c,
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  })),
+  info: (c = '#0A84FF') => /*#__PURE__*/React.createElement("svg", {
+    width: "16",
+    height: "16",
+    viewBox: "0 0 16 16",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "8",
+    cy: "8",
+    r: "6.6",
+    stroke: c,
+    strokeWidth: "1.5"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M8 7.2v3.6M8 5.1v.2",
+    stroke: c,
+    strokeWidth: "1.7",
+    strokeLinecap: "round"
+  })),
+  copy: () => /*#__PURE__*/React.createElement("svg", {
+    width: "15",
+    height: "15",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#AEAEB2",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "9",
+    y: "9",
+    width: "12",
+    height: "12",
+    rx: "2.5"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M5 15V5a2 2 0 0 1 2-2h10"
+  }))
+};
+// segmented control
+function BVSeg({
+  items,
+  value,
+  onChange,
+  small
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      background: 'rgba(118,118,128,0.12)',
+      borderRadius: 10,
+      padding: 2
+    }
+  }, items.map(([k, l]) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    onClick: () => onChange(k),
+    style: {
+      flex: 1,
+      height: small ? 30 : 34,
+      borderRadius: 8,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      fontSize: 13.5,
+      fontWeight: 600,
+      background: value === k ? '#fff' : 'transparent',
+      boxShadow: value === k ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+      color: BV.text
+    }
+  }, l)));
+}
+function BVSwitch({
+  on,
+  onClick
+}) {
+  return /*#__PURE__*/React.createElement("span", {
+    onClick: onClick,
+    style: {
+      width: 51,
+      height: 31,
+      borderRadius: 16,
+      background: on ? '#34C759' : 'rgba(120,120,128,0.16)',
+      position: 'relative',
+      cursor: 'pointer',
+      flexShrink: 0,
+      transition: 'background .2s'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      top: 2,
+      left: on ? 22 : 2,
+      width: 27,
+      height: 27,
+      borderRadius: '50%',
+      background: '#fff',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.18)',
+      transition: 'left .2s'
+    }
+  }));
+}
+const bvRow = (kids, first, x) => {
+  const {
+    onClick,
+    ...st
+  } = x || {};
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: onClick,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '13px 0',
+      borderTop: first ? 'none' : bvHair,
+      ...st
+    }
+  }, kids);
+};
+
+// ─────────────────────────── Triggers ───────────────────────────
+function bvTrigReason(t) {
+  if (t.status === 'unchecked') return 'Not checked — an earlier trigger matched';
+  if (t.status === 'accepted') return t.noTP ? 'Matched · no target price' : `Matched at ${t.offer.price} (${t.offer.col})`;
+  const f = t.lines.find(l => l.status === 'failed');
+  return f ? `${f.label} ${f.actual} — needs ${f.target}` : 'Did not match';
+}
+function BVTrigStyle() {
+  const [bg, setBg] = window.useBzPref('trigBg', 'none');
+  return /*#__PURE__*/React.createElement(BVSeg, {
+    small: true,
+    items: [['none', 'None'], ['light', 'Light'], ['solid', 'Solid']],
+    value: bg,
+    onChange: setBg
+  });
+}
+function BVTriggersA({
+  r
+}) {
+  const acc = r.run.triggers.find(t => t.status === 'accepted');
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Triggers",
+    align: "left",
+    right: /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        fontSize: 14,
+        fontWeight: 600,
+        color: '#0A84FF'
+      }
+    }, bvIcon.info(), "How")
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '16px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 13,
+      background: acc ? 'rgba(22,163,74,0.08)' : '#fff',
+      boxShadow: 'none'
+    }
+  }, acc ? bvIcon.ok(30) : bvIcon.no(30), /*#__PURE__*/React.createElement("div", {
+    style: {
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 19,
+      fontWeight: 700,
+      color: acc ? '#157A3E' : BV.text
+    }
+  }, acc ? acc.name : 'No trigger matched'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 2,
+      fontSize: 13.5,
+      color: '#6C6C70'
+    }
+  }, acc ? bvTrigReason(acc) : `${r.run.triggers.length} triggers checked`))), bvLabel('Checked top to bottom'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, r.run.triggers.map((t, i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, t.status === 'accepted' ? bvIcon.ok() : t.status === 'failed' ? bvIcon.no() : bvIcon.skip(), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      opacity: t.status === 'unchecked' ? 0.5 : 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15.5,
+      fontWeight: 600
+    }
+  }, t.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 2,
+      fontSize: 13,
+      color: '#8E8E93',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, bvTrigReason(t))), bvIcon.chev()), i === 0))), bvLabel('Trigger row on the scan page'), /*#__PURE__*/React.createElement(BVTrigStyle, null));
+}
+function BVTriggersB({
+  r
+}) {
+  const ts = r.run.triggers,
+    acc = ts.find(t => t.status === 'accepted');
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: acc ? acc.name : 'No trigger matched',
+    sub: acc ? 'Trigger matched' : 'None of your triggers matched',
+    lead: /*#__PURE__*/React.createElement("span", {
+      style: {
+        marginBottom: 10
+      }
+    }, acc ? bvIcon.ok(40) : bvIcon.no(40))
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '8px 18px'
+    }
+  }, ts.map((t, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: 'flex',
+      gap: 14,
+      position: 'relative',
+      paddingBottom: i < ts.length - 1 ? 14 : 4,
+      paddingTop: 8
+    }
+  }, i < ts.length - 1 && /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: 9,
+      top: 32,
+      bottom: 0,
+      width: 2,
+      background: 'rgba(60,60,67,0.12)'
+    }
+  }), t.status === 'accepted' ? bvIcon.ok() : t.status === 'failed' ? bvIcon.no() : bvIcon.skip(), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      opacity: t.status === 'unchecked' ? 0.45 : 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'baseline',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15.5,
+      fontWeight: 600
+    }
+  }, t.name), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12.5,
+      color: '#AEAEB2'
+    }
+  }, t.offer.col)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 3,
+      fontSize: 13,
+      color: t.status === 'failed' ? '#8E8E93' : t.status === 'accepted' ? '#157A3E' : '#AEAEB2'
+    }
+  }, bvTrigReason(t)))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      margin: '18px 4px 0'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 500,
+      color: '#6C6C70',
+      whiteSpace: 'nowrap'
+    }
+  }, "Row style"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement(BVTrigStyle, null))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      marginTop: 20,
+      fontSize: 14,
+      fontWeight: 600,
+      color: '#0A84FF'
+    }
+  }, "How triggers work"));
+}
+
+// Triggers A (from feedback): the sheet as it is, without the "… · Accepted" line under the title; the list gets its own
+// label "Checked top to bottom" with "How it works" on the same line, like "Trigger row background" below it
+function BVTriggersP({
+  r
+}) {
+  const [pg, setPg] = React.useState(null);
+  if (pg) return /*#__PURE__*/React.createElement(BVSheet, {
+    bare: true,
+    maxH: "92%",
+    title: pg.kind === 'info' ? 'How triggers work' : 'Trigger',
+    sub: pg.kind === 'trigger' ? pg.item.name : null,
+    right: bvBack(() => setPg(null))
+  }, pg.kind === 'info' ? /*#__PURE__*/React.createElement(TriggersInfoBody, null) : /*#__PURE__*/React.createElement(CSTriggerDetailBody, {
+    t: pg.item
+  }));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Triggers"
+  }, /*#__PURE__*/React.createElement(CSSectionLabel, {
+    right: /*#__PURE__*/React.createElement("span", {
+      onClick: () => setPg({
+        kind: 'info'
+      }),
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        cursor: 'pointer',
+        color: '#0064D1',
+        fontWeight: 600
+      }
+    }, /*#__PURE__*/React.createElement("svg", {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none"
+    }, /*#__PURE__*/React.createElement("circle", {
+      cx: "8",
+      cy: "8",
+      r: "6.4",
+      stroke: "#0064D1",
+      strokeWidth: "1.5"
+    }), /*#__PURE__*/React.createElement("path", {
+      d: "M8 7.2v3.6M8 5.2v.2",
+      stroke: "#0064D1",
+      strokeWidth: "1.6",
+      strokeLinecap: "round"
+    })), "How it works")
+  }, "Checked top to bottom"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      padding: '2px 15px'
+    }
+  }, r.run.triggers.map((t, i) => /*#__PURE__*/React.createElement(CSCleanTriggerRow, {
+    key: i,
+    t: t,
+    first: i === 0,
+    onClick: () => setPg({
+      kind: 'trigger',
+      item: t
+    })
+  }))), /*#__PURE__*/React.createElement(CSTrigBgSettings, null));
+}
+
+// ─────────────────────────── Compliance checks ───────────────────────────
+function BVChecksA({
+  r
+}) {
+  const cs = r.run.checks,
+    flagged = cs.filter(c => c.flagged),
+    ok = cs.filter(c => !c.flagged);
+  const [showOk, setShowOk] = React.useState(false);
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Compliance checks",
+    align: "left",
+    sub: flagged.length ? `${flagged.length} of ${cs.length} need a look` : `All ${cs.length} checks passed`
+  }, flagged.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, flagged.map((c, i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, bvIcon.warn(18, c.sev.dot), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15.5,
+      fontWeight: 600
+    }
+  }, c.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 2,
+      fontSize: 13,
+      color: '#8E8E93',
+      lineHeight: 1.35
+    }
+  }, c.message)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: c.sev.text,
+      whiteSpace: 'nowrap'
+    }
+  }, c.state)), i === 0, {
+    alignItems: 'flex-start'
+  }))), /*#__PURE__*/React.createElement("div", {
+    onClick: () => setShowOk(!showOk),
+    style: {
+      ...bvCard,
+      padding: '0 16px',
+      marginTop: 12,
+      cursor: 'pointer'
+    }
+  }, bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, bvIcon.ok(20), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15.5,
+      fontWeight: 600
+    }
+  }, ok.length, " passed"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13.5,
+      color: '#0A84FF',
+      fontWeight: 600
+    }
+  }, showOk ? 'Hide' : 'Show')), true), showOk && ok.map(c => bvRow(/*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14.5,
+      color: '#6C6C70',
+      paddingLeft: 32
+    }
+  }, c.name), false, {
+    padding: '11px 0'
+  }))));
+}
+function BVChecksB({
+  r
+}) {
+  const cs = r.run.checks,
+    flagged = cs.filter(c => c.flagged),
+    ok = cs.filter(c => !c.flagged);
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Compliance checks"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, [[flagged.length, 'To review', flagged.length ? BV_ORANGE : '#8E8E93'], [ok.length, 'Passed', BV_GREEN]].map(([n, l, c]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    style: {
+      ...bvCard,
+      flex: 1,
+      padding: '14px 16px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 28,
+      fontWeight: 700,
+      color: c
+    }
+  }, n), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: '#8E8E93',
+      fontWeight: 500
+    }
+  }, l)))), flagged.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, bvLabel('To review'), flagged.map(c => /*#__PURE__*/React.createElement("div", {
+    key: c.id,
+    style: {
+      ...bvCard,
+      padding: '14px 16px',
+      marginBottom: 8,
+      display: 'flex',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 4,
+      borderRadius: 2,
+      background: c.sev.dot,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'baseline',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15.5,
+      fontWeight: 600
+    }
+  }, c.name), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12.5,
+      color: c.sev.text,
+      fontWeight: 600
+    }
+  }, c.state)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4,
+      fontSize: 13.5,
+      color: '#6C6C70',
+      lineHeight: 1.4
+    }
+  }, c.todo)), bvIcon.chev()))), bvLabel('Passed'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 8
+    }
+  }, ok.map(c => /*#__PURE__*/React.createElement("span", {
+    key: c.id,
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '8px 12px',
+      borderRadius: 999,
+      background: '#fff',
+      fontSize: 13.5,
+      fontWeight: 500,
+      color: '#3A3A3C'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "12",
+    height: "12",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: BV_GREEN,
+    strokeWidth: "3.4",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M5 12.5l4.5 4.5L19 7"
+  })), c.short || c.name))));
+}
+
+// Compliance checks (from feedback): no summary card, no "n flags raised" line; one card of rows — three row styles
+function BVChecksRows({
+  r,
+  kind
+}) {
+  // fixed order from the flags work: Restricted ASIN, IP Violation, Access Code, Block List, Multi-Volume, FBA Overstock, Digital Media
+  const cs = [...r.run.checks].sort((a, b) => a.importance - b.importance);
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Compliance checks"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      padding: '2px 15px',
+      marginTop: 4
+    }
+  }, cs.map((c, i) => kind === 'now' ? /*#__PURE__*/React.createElement(CSCleanCheckRow, {
+    key: c.id,
+    c: c,
+    first: i === 0,
+    onClick: () => {}
+  }) : kind === 'plain' ?
+  /*#__PURE__*/
+  // name and the value, nothing else
+  React.createElement("div", {
+    key: c.id,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '14px 2px',
+      borderTop: i ? `1px solid ${TOKENS.divider}` : 'none'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 500,
+      color: c.flagged ? TOKENS.text : '#6C6C70'
+    }
+  }, c.name), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 600,
+      color: c.flagged ? c.sev.text : '#AEAEB2'
+    }
+  }, c.state)) :
+  /*#__PURE__*/
+  // icon-led: a warning / check icon, the name, the value in quiet gray
+  React.createElement("div", {
+    key: c.id,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 11,
+      padding: '13px 2px',
+      borderTop: i ? `1px solid ${TOKENS.divider}` : 'none'
+    }
+  }, c.flagged ? bvIcon.warn(17, c.sev.dot) : /*#__PURE__*/React.createElement("svg", {
+    width: "17",
+    height: "17",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#34C759",
+    strokeWidth: "2.8",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    style: {
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M5 12.5l4.5 4.5L19 7"
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: c.flagged ? 600 : 500,
+      color: c.flagged ? TOKENS.text : '#6C6C70'
+    }
+  }, c.name), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13.5,
+      fontWeight: 500,
+      color: c.flagged ? c.sev.text : '#AEAEB2'
+    }
+  }, c.state), bvIcon.chev()))));
+}
+
+// Compliance checks B: version A's look, with the names, values and colors from the "ProScan Flags — How the Checks Work"
+// doc (work in progress there). Order: the doc's scan-screen order (Restricted ASIN first).
+// [id, name, AI estimate?, raised values, not-raised value, raised color, not-raised color]
+const BV_FLAGS_DOC = [['restricted', 'Restricted ASIN', false, ['Gated'], 'Clear', 'red', 'green'], ['block', 'In Block List', false, ['Listed'], 'Clear', 'amber', 'green'], ['ip', 'Potential IP Violation', true, ['High'], 'Normal', 'amber', 'gray'], ['access', 'Potential Access Code', true, ['Likely', 'Possible'], 'Unlikely', 'amber', 'gray'], ['multi', 'Potential Multi-Item', true, ['Likely', 'Possible'], 'Unlikely', 'amber', 'gray'], ['digital', 'Digital Media Product', false, ['Caution'], 'Clear', 'amber', 'green'], ['overstock', 'FBA Overstock Alert', false, ['Caution'], 'Clear', 'amber', 'green']];
+const BV_FLAG_COL = {
+  red: CS_SEV.gated,
+  amber: CS_SEV.caution,
+  green: CS_SEV.pass,
+  gray: CS_SEV.clear
+};
+function BVChecksDoc({
+  r
+}) {
+  const byId = Object.fromEntries(r.run.checks.map(c => [c.id, c]));
+  const [pg, setPg] = React.useState(null);
+  if (pg) return /*#__PURE__*/React.createElement(BVSheet, {
+    bare: true,
+    maxH: "92%",
+    title: "Compliance check",
+    right: bvBack(() => setPg(null))
+  }, /*#__PURE__*/React.createElement(CSCheckDetailBody, {
+    c: pg
+  }));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Compliance checks"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      padding: '2px 15px',
+      marginTop: 4
+    }
+  }, BV_FLAGS_DOC.map(([id, name, ai, up, down, upC, downC], i) => {
+    const c = byId[id] || {},
+      raised = !!c.flagged;
+    const val = raised ? up.length > 1 && /possib/i.test(c.state || '') ? up[1] : up[0] : down;
+    const col = BV_FLAG_COL[raised ? upC : downC];
+    return /*#__PURE__*/React.createElement("div", {
+      key: id,
+      onClick: () => c.id && setPg(c),
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 11,
+        padding: '13px 2px',
+        borderTop: i ? `1px solid ${TOKENS.divider}` : 'none',
+        opacity: raised ? 1 : 0.62,
+        cursor: c.id ? 'pointer' : 'default'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 9,
+        height: 9,
+        borderRadius: 999,
+        background: col.dot,
+        flexShrink: 0
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 14.5,
+        fontWeight: 600,
+        color: TOKENS.text
+      }
+    }, name), ai && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 9,
+        fontWeight: 800,
+        color: CS_AI_COLOR,
+        background: `${CS_AI_COLOR}1a`,
+        padding: '2px 5px',
+        borderRadius: 4,
+        letterSpacing: 0.4
+      }
+    }, "AI"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        marginLeft: 'auto',
+        fontSize: 11,
+        fontWeight: 800,
+        color: col.text,
+        textTransform: 'uppercase',
+        letterSpacing: 0.3,
+        whiteSpace: 'nowrap'
+      }
+    }, val), /*#__PURE__*/React.createElement("svg", {
+      width: "12",
+      height: "12",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: TOKENS.textTertiary,
+      strokeWidth: "2",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      style: {
+        flexShrink: 0
+      }
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M6 4l4 4-4 4"
+    })));
+  })));
+}
+
+// ─────────────────────────── Product details ───────────────────────────
+const bvYear = r => (String(r.publishDate || '').match(/\d{4}/) || [''])[0];
+function BVProductA({
+  r
+}) {
+  const meta = [r.category === 'Book' ? r.binding : r.amazonCategory, r.pages && `${r.pages} pages`, bvYear(r)].filter(Boolean).join(' · ');
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details",
+    maxH: "90%"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      textAlign: 'center',
+      paddingTop: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderRadius: 10,
+      boxShadow: '0 10px 24px rgba(15,15,20,0.22)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderRadius: 10,
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement(PSCover, {
+    w: 96,
+    h: 140,
+    r: 10,
+    src: r.cover
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16,
+      fontFamily: BV.fontDisplay,
+      fontSize: 20,
+      fontWeight: 700,
+      letterSpacing: -0.3,
+      lineHeight: 1.2,
+      padding: '0 10px'
+    }
+  }, r.title), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6,
+      fontSize: 14,
+      color: '#8E8E93'
+    }
+  }, meta)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement(CSSectionLabel, null, "Details")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      padding: '2px 15px'
+    }
+  }, [['List price', r.listPrice != null ? bvMoney(r.listPrice) : '—'], ['Publisher', r.publisher], ['Published', r.publishDate], ['Weight', r.weight]].filter(x => x[1]).map(([k, v], i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      color: '#6C6C70',
+      flex: 1
+    }
+  }, k), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      fontWeight: 500
+    }
+  }, v)), i === 0))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6
+    }
+  }, /*#__PURE__*/React.createElement(CSSectionLabel, null, "Identifiers")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      padding: '2px 15px'
+    }
+  }, [['ASIN', r.asin], ['ISBN-13', r.isbn13], ['ISBN-10', r.isbn10]].filter(x => x[1]).map(([k, v], i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      color: '#6C6C70',
+      width: 72
+    }
+  }, k), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 600,
+      color: '#0A84FF',
+      cursor: 'pointer'
+    }
+  }, "Copy")), i === 0))));
+}
+// Product details C: A's cards, with a smaller cover on the left and the category, the full title (never cut) and
+// pages · year on the right
+function BVProductC({
+  r
+}) {
+  const book = r.category === 'Book';
+  const cat = book ? `Book · ${r.binding || '—'}` : r.amazonCategory || 'Non-book';
+  const facts = [r.pages && `${r.pages} pages`, bvYear(r)].filter(Boolean).join(' · ');
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details",
+    maxH: "90%"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 14,
+      alignItems: 'flex-start',
+      padding: '6px 2px 0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flexShrink: 0,
+      borderRadius: 8,
+      boxShadow: '0 6px 16px rgba(15,15,20,0.18)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderRadius: 8,
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement(PSCover, {
+    w: 64,
+    h: 94,
+    r: 8,
+    src: r.cover
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      paddingTop: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      fontWeight: 700,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      color: book ? '#0064D1' : '#52525C'
+    }
+  }, cat), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 5,
+      fontFamily: BV.fontDisplay,
+      fontSize: 17,
+      fontWeight: 700,
+      letterSpacing: -0.2,
+      lineHeight: 1.3,
+      color: BV.text,
+      overflowWrap: 'anywhere'
+    }
+  }, r.title), facts && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 5,
+      fontSize: 13.5,
+      color: '#8E8E93'
+    }
+  }, facts))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement(CSSectionLabel, null, "Details")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      padding: '2px 15px'
+    }
+  }, [['List price', r.listPrice != null ? bvMoney(r.listPrice) : '—'], ['Publisher', r.publisher], ['Published', r.publishDate], ['Weight', r.weight]].filter(x => x[1]).map(([k, v], i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      color: '#6C6C70',
+      flex: 1
+    }
+  }, k), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      fontWeight: 500
+    }
+  }, v)), i === 0))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6
+    }
+  }, /*#__PURE__*/React.createElement(CSSectionLabel, null, "Identifiers")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      padding: '2px 15px'
+    }
+  }, [['ASIN', r.asin], ['ISBN-13', r.isbn13], ['ISBN-10', r.isbn10]].filter(x => x[1]).map(([k, v], i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      color: '#6C6C70',
+      width: 72
+    }
+  }, k), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 600,
+      color: '#0A84FF',
+      cursor: 'pointer'
+    }
+  }, "Copy")), i === 0))));
+}
+// ── Product details B–D: variations of A (cover beside the title) with less repetition ──
+const bvWeight = w => w == null || w === '' ? null : /[a-z]/i.test(String(w)) ? String(w) : `${w} lb`;
+const bvPubDate = r => r.publishDate || bvYear(r);
+function BVPdHead({
+  r,
+  lines
+}) {
+  const book = r.category === 'Book';
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 14,
+      alignItems: 'flex-start',
+      padding: '6px 2px 0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flexShrink: 0,
+      borderRadius: 8,
+      boxShadow: '0 6px 16px rgba(15,15,20,0.18)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderRadius: 8,
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement(PSCover, {
+    w: 64,
+    h: 94,
+    r: 8,
+    src: r.cover
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      paddingTop: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      fontWeight: 700,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      color: book ? '#0064D1' : '#52525C'
+    }
+  }, book ? `Book · ${r.binding || '—'}` : r.amazonCategory || 'Non-book'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 5,
+      fontFamily: BV.fontDisplay,
+      fontSize: 17,
+      fontWeight: 700,
+      letterSpacing: -0.2,
+      lineHeight: 1.3,
+      overflowWrap: 'anywhere'
+    }
+  }, r.title), lines.filter(Boolean).map((l, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      marginTop: i ? 2 : 5,
+      fontSize: 13.5,
+      color: '#8E8E93'
+    }
+  }, l))));
+}
+function BVPdIds({
+  r,
+  label = true
+}) {
+  return /*#__PURE__*/React.createElement(React.Fragment, null, label && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6
+    }
+  }, /*#__PURE__*/React.createElement(CSSectionLabel, null, "Identifiers")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      padding: '2px 15px'
+    }
+  }, [['ASIN', r.asin], ['ISBN-13', r.isbn13], ['ISBN-10', r.isbn10]].filter(x => x[1]).map(([k, v], i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      color: '#6C6C70',
+      width: 72
+    }
+  }, k), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 600,
+      color: '#0A84FF',
+      cursor: 'pointer'
+    }
+  }, "Copy")), i === 0))));
+}
+const bvPages = r => [r.pages && `${r.pages} pages`, bvWeight(r.weight)].filter(Boolean).join(' · ');
+// B: pages · weight under the title; Details shrinks to two rows — List price, and Published (publisher with the date under it)
+function BVProductB2({
+  r
+}) {
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details",
+    maxH: "90%"
+  }, /*#__PURE__*/React.createElement(BVPdHead, {
+    r: r,
+    lines: [bvPages(r)]
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement(CSSectionLabel, null, "Details")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      padding: '2px 15px'
+    }
+  }, bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      color: '#6C6C70'
+    }
+  }, "List price"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      fontWeight: 600
+    }
+  }, r.listPrice != null ? bvMoney(r.listPrice) : '—')), true), bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      color: '#6C6C70'
+    }
+  }, "Published"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      textAlign: 'right'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 500
+    }
+  }, r.publisher || '—'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: '#8E8E93',
+      marginTop: 1
+    }
+  }, bvPubDate(r)))), false, {
+    padding: '11px 0'
+  })), /*#__PURE__*/React.createElement(BVPdIds, {
+    r: r
+  }));
+}
+// C: everything about the book sits beside the cover (pages · weight, publisher · date); only List price stands alone
+function BVProductC2({
+  r
+}) {
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details",
+    maxH: "90%"
+  }, /*#__PURE__*/React.createElement(BVPdHead, {
+    r: r,
+    lines: [bvPages(r), [r.publisher, bvPubDate(r)].filter(Boolean).join(' · ')]
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      marginTop: 16,
+      padding: '14px 16px',
+      display: 'flex',
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      color: '#6C6C70'
+    }
+  }, "List price"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 20,
+      fontWeight: 700
+    }
+  }, r.listPrice != null ? bvMoney(r.listPrice) : '—')), /*#__PURE__*/React.createElement(BVPdIds, {
+    r: r
+  }));
+}
+// D: publisher · year under the title; one card of three small facts side by side (List price · Pages · Weight)
+function BVProductD2({
+  r
+}) {
+  const cell = (k, v, last) => /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      padding: '12px 4px',
+      textAlign: 'center',
+      borderRight: last ? 'none' : bvHair
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: '#8E8E93',
+      fontWeight: 500
+    }
+  }, k), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 3,
+      fontSize: 17,
+      fontWeight: 700,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v || '—'));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details",
+    maxH: "90%"
+  }, /*#__PURE__*/React.createElement(BVPdHead, {
+    r: r,
+    lines: [[r.publisher, bvYear(r)].filter(Boolean).join(' · ')]
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      marginTop: 16,
+      display: 'flex',
+      padding: '0 4px'
+    }
+  }, cell('List price', r.listPrice != null ? bvMoney(r.listPrice) : null), cell('Pages', r.pages), cell('Weight', bvWeight(r.weight), true)), /*#__PURE__*/React.createElement(BVPdIds, {
+    r: r
+  }));
+}
+function BVProductB({
+  r
+}) {
+  const tile = (k, v) => /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: '#8E8E93',
+      fontWeight: 500
+    }
+  }, k), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4,
+      fontSize: 16,
+      fontWeight: 600
+    }
+  }, v || '—'));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details",
+    align: "left",
+    maxH: "88%"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 14,
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement(PSCover, {
+    w: 64,
+    h: 94,
+    r: 8,
+    src: r.cover
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 17,
+      fontWeight: 700,
+      lineHeight: 1.25
+    }
+  }, r.title), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 5,
+      fontSize: 13.5,
+      color: '#8E8E93'
+    }
+  }, r.category === 'Book' ? `Book · ${r.binding}` : r.amazonCategory))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 10,
+      marginTop: 18
+    }
+  }, tile('List price', r.listPrice != null ? bvMoney(r.listPrice) : null), tile('Pages', r.pages), tile('Published', r.publishDate), tile('Weight', r.weight)), tile('Publisher', r.publisher) && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10
+    }
+  }, tile('Publisher', r.publisher)), bvLabel('Identifiers'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, [['ASIN', r.asin], ['ISBN-13', r.isbn13], ['ISBN-10', r.isbn10]].filter(x => x[1]).map(([k, v], i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14.5,
+      color: '#8E8E93',
+      width: 70
+    }
+  }, k), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13.5,
+      fontWeight: 600,
+      color: '#0A84FF'
+    }
+  }, "Copy")), i === 0))));
+}
+
+// ─────────────────────────── ASR ───────────────────────────
+const bvAsrPos = n => Math.max(0, Math.min(1, 1 - Math.log10(Math.max(n, 1000) / 1000) / Math.log10(1500)));
+const bvAsrWord = n => n < 50000 ? 'Sells fast' : n < 300000 ? 'Sells steadily' : n < 1000000 ? 'Sells slowly' : 'Rarely sells';
+function BVAsrScale({
+  n,
+  h = 8
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      height: h,
+      borderRadius: h,
+      background: 'linear-gradient(90deg, #E5484D 0%, #F5A524 45%, #16A34A 100%)',
+      opacity: 0.9
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      top: '50%',
+      left: `${bvAsrPos(n) * 100}%`,
+      width: h + 10,
+      height: h + 10,
+      borderRadius: '50%',
+      background: '#fff',
+      border: '3px solid #1C1C1E',
+      boxSizing: 'border-box',
+      transform: 'translate(-50%,-50%)'
+    }
+  }));
+}
+function BVAsrA({
+  r
+}) {
+  const live = Math.round(r.asr * 0.82);
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Average Sales Rank"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 48,
+      fontWeight: 700,
+      letterSpacing: -1
+    }
+  }, psRank(r.asr)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 600,
+      color: '#3A3A3C'
+    }
+  }, bvAsrWord(r.asr))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '18px 18px 14px',
+      marginTop: 18
+    }
+  }, /*#__PURE__*/React.createElement(BVAsrScale, {
+    n: r.asr
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginTop: 10,
+      fontSize: 12.5,
+      color: '#8E8E93'
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "Slow \xB7 1.5M"), /*#__PURE__*/React.createElement("span", null, "Fast \xB7 1K"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16,
+      fontSize: 14,
+      lineHeight: 1.5,
+      color: '#6C6C70',
+      padding: '0 4px'
+    }
+  }, "The average of Amazon's daily sales rank over the last 6 months. Lower is better. It moves slowly, so it's the steadiest number for buying."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px',
+      marginTop: 16
+    }
+  }, bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      color: '#6C6C70'
+    }
+  }, "Sales rank right now"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 16,
+      fontWeight: 700
+    }
+  }, psRank(live))), true)));
+}
+function BVAsrB({
+  r
+}) {
+  const live = Math.round(r.asr * 0.82);
+  const tile = (k, v, s) => /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      flex: 1,
+      padding: '14px 16px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: '#8E8E93',
+      fontWeight: 500
+    }
+  }, k), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4,
+      fontFamily: BV.fontDisplay,
+      fontSize: 28,
+      fontWeight: 700
+    }
+  }, psRank(v)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 2,
+      fontSize: 12.5,
+      color: '#AEAEB2'
+    }
+  }, s));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Sales rank",
+    align: "left",
+    sub: bvAsrWord(r.asr)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, tile('6-month average', r.asr, 'Use this one'), tile('Right now', live, 'Swings a lot')), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '16px 18px',
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement(BVAsrScale, {
+    n: r.asr,
+    h: 6
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginTop: 9,
+      fontSize: 12.5,
+      color: '#8E8E93'
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "Slow"), /*#__PURE__*/React.createElement("span", null, "Fast"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 18,
+      padding: '0 4px',
+      fontSize: 14,
+      fontWeight: 600,
+      color: '#0A84FF'
+    }
+  }, bvIcon.info(), "What these numbers mean"));
+}
+
+// ─────────────────────────── Sold Days ───────────────────────────
+const bvSoldWord = d => d === 0 ? 'No sales seen' : d < 7 ? 'Sells rarely' : d < 20 ? 'Sells now and then' : d < 40 ? 'Sells often' : 'Sells very often';
+function BVSoldA({
+  r
+}) {
+  const d = r.soldDays || 0;
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Sold Days"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 48,
+      fontWeight: 700
+    }
+  }, d), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 20,
+      fontWeight: 600,
+      color: '#AEAEB2'
+    }
+  }, " / 180"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 600,
+      color: '#3A3A3C'
+    }
+  }, bvSoldWord(d))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '16px',
+      marginTop: 18
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(30, 1fr)',
+      gap: 3
+    }
+  }, Array.from({
+    length: 180
+  }, (_, i) => {
+    const on = i * 37 % 180 < d;
+    return /*#__PURE__*/React.createElement("span", {
+      key: i,
+      style: {
+        aspectRatio: '1',
+        borderRadius: 2,
+        background: on ? BV_GREEN : 'rgba(60,60,67,0.10)'
+      }
+    });
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginTop: 10,
+      fontSize: 12.5,
+      color: '#8E8E93'
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "6 months ago"), /*#__PURE__*/React.createElement("span", null, "Today"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16,
+      fontSize: 14,
+      lineHeight: 1.5,
+      color: '#6C6C70',
+      padding: '0 4px'
+    }
+  }, "Days in the last 6 months with at least one sale, estimated from sales rank drops. Each green square is a day with a sale."));
+}
+function BVSoldB({
+  r
+}) {
+  const d = r.soldDays || 0,
+    steps = [[0, 'None'], [7, 'Rarely'], [20, 'Sometimes'], [40, 'Often']];
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Sold Days",
+    align: "left",
+    sub: "Last 6 months"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '18px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'baseline',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 40,
+      fontWeight: 700
+    }
+  }, d), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      color: '#8E8E93'
+    }
+  }, "days with a sale")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 4,
+      marginTop: 14
+    }
+  }, steps.map(([min, l], i) => {
+    const on = d >= min && (i === 3 || d < steps[i + 1][0]);
+    return /*#__PURE__*/React.createElement("div", {
+      key: l,
+      style: {
+        flex: 1
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: 6,
+        borderRadius: 3,
+        background: on ? BV_GREEN : 'rgba(60,60,67,0.10)'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 6,
+        fontSize: 12,
+        fontWeight: on ? 700 : 500,
+        color: on ? '#157A3E' : '#AEAEB2'
+      }
+    }, l));
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16,
+      fontSize: 14,
+      lineHeight: 1.5,
+      color: '#6C6C70',
+      padding: '0 4px'
+    }
+  }, "Amazon doesn't share sales, so we count the days the sales rank jumped. One day can have more than one sale."));
+}
+
+// Sold Days B / C: A's look, but the verdict uses the app's scale (psSoldBand: Bad 1–4 · Low 5–9 · Fair 10–16 ·
+// Good 17–24 · Very good 25–39 · Excellent 40+, No sales at 0) and the scale itself is shown; "How Sold Days works"
+// (the three versions) is a button at the bottom that opens a sub-page.
+const BV_SD_BANDS = [[1, 4, 'Bad'], [5, 9, 'Low'], [10, 16, 'Fair'], [17, 24, 'Good'], [25, 39, 'Very good'], [40, 180, 'Excellent']];
+const bvSdRange = (lo, hi) => hi >= 180 ? `${lo}+` : `${lo}–${hi}`;
+function BVSoldShell({
+  r,
+  children
+}) {
+  const [page, setPage] = React.useState('main');
+  const d = r.soldDays || 0,
+    band = psSoldBand(d);
+  if (page === 'detail') return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "How Sold Days works",
+    right: /*#__PURE__*/React.createElement("span", {
+      onClick: () => setPage('main'),
+      style: {
+        width: 34,
+        height: 34,
+        borderRadius: '50%',
+        background: '#fff',
+        boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 4px 12px rgba(15,15,20,0.10)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement("svg", {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M10 3L5 8l5 5",
+      stroke: "#3A3A3C",
+      strokeWidth: "2.2",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    })))
+  }, /*#__PURE__*/React.createElement(CSSectionLabel, null, "The three versions"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#fff',
+      borderRadius: 20,
+      overflow: 'hidden'
+    }
+  }, PS_SD_STATES.map((it, i) => {
+    const dot = it.dot === 'ter' ? '#AEAEB2' : it.dot === null ? PS_ORANGE : it.dot;
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        padding: '13px 15px',
+        borderTop: i ? bvHair : 'none'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 9
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 9,
+        height: 9,
+        borderRadius: '50%',
+        background: dot
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 15.5,
+        fontWeight: 700,
+        flex: 1
+      }
+    }, it.name), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 600,
+        color: '#6C6C70',
+        background: 'rgba(60,60,67,0.07)',
+        padding: '2px 8px',
+        borderRadius: 6
+      }
+    }, it.tag != null ? it.tag : String(d))), /*#__PURE__*/React.createElement("p", {
+      style: {
+        margin: '8px 0 0',
+        fontSize: 13,
+        lineHeight: 1.5,
+        color: '#6C6C70'
+      }
+    }, it.desc));
+  })));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Sold Days"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 48,
+      fontWeight: 700
+    }
+  }, d), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 22,
+      fontWeight: 600,
+      color: '#3A3A3C'
+    }
+  }, " ", d === 1 ? 'day' : 'days'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 2,
+      fontSize: 15,
+      fontWeight: 500,
+      color: '#8E8E93'
+    }
+  }, "with a sale in the last 180 days")), children(d, band), /*#__PURE__*/React.createElement("div", {
+    onClick: () => setPage('detail'),
+    style: {
+      ...bvCard,
+      marginTop: 14,
+      padding: '14px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      cursor: 'pointer'
+    }
+  }, bvIcon.info('#26324D'), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600
+    }
+  }, "How Sold Days works"), bvIcon.chev()));
+}
+const bvSoldGrid = d => /*#__PURE__*/React.createElement("div", {
+  style: {
+    ...bvCard,
+    padding: '16px',
+    marginTop: 14
+  }
+}, /*#__PURE__*/React.createElement("div", {
+  style: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(30, 1fr)',
+    gap: 3
+  }
+}, Array.from({
+  length: 180
+}, (_, i) => /*#__PURE__*/React.createElement("span", {
+  key: i,
+  style: {
+    aspectRatio: '1',
+    borderRadius: 2,
+    background: i * 37 % 180 < d ? BV_GREEN : 'rgba(60,60,67,0.10)'
+  }
+}))), /*#__PURE__*/React.createElement("div", {
+  style: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    fontSize: 12.5,
+    color: '#8E8E93'
+  }
+}, /*#__PURE__*/React.createElement("span", null, "6 months ago"), /*#__PURE__*/React.createElement("span", null, "Today")));
+// B: the grid, then the scale as six segments (current one in its colour, the range under each)
+function BVSoldB2({
+  r
+}) {
+  return /*#__PURE__*/React.createElement(BVSoldShell, {
+    r: r
+  }, d => /*#__PURE__*/React.createElement(React.Fragment, null, bvSoldGrid(d), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '14px 12px 12px',
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 4
+    }
+  }, BV_SD_BANDS.map(([lo, hi, w]) => {
+    const on = d >= lo && d <= hi,
+      b = psSoldBand(lo);
+    return /*#__PURE__*/React.createElement("div", {
+      key: w,
+      style: {
+        flex: 1,
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: 8,
+        borderRadius: 4,
+        background: on ? b.color : b.soft
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 7,
+        fontSize: 11,
+        fontWeight: on ? 800 : 600,
+        color: on ? b.color : '#8E8E93',
+        whiteSpace: 'nowrap'
+      }
+    }, w), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 1,
+        fontSize: 10.5,
+        color: '#AEAEB2',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, bvSdRange(lo, hi)));
+  })))));
+}
+// C: no grid; the scale as a ladder, best at the top, this item's row highlighted
+function BVSoldC2({
+  r
+}) {
+  return /*#__PURE__*/React.createElement(BVSoldShell, {
+    r: r
+  }, d => /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '6px 8px',
+      marginTop: 14
+    }
+  }, [...BV_SD_BANDS].reverse().map(([lo, hi, w], i) => {
+    const on = d >= lo && d <= hi,
+      b = psSoldBand(lo);
+    return /*#__PURE__*/React.createElement("div", {
+      key: w,
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '9px 10px',
+        borderRadius: 12,
+        background: on ? b.soft : 'transparent'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
+        background: b.color,
+        opacity: on ? 1 : 0.45
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        fontSize: 15,
+        fontWeight: on ? 700 : 500,
+        color: on ? b.color : '#3A3A3C'
+      }
+    }, w), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 13.5,
+        fontWeight: on ? 700 : 500,
+        color: on ? b.color : '#AEAEB2',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, bvSdRange(lo, hi), " days"), on && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 800,
+        color: '#fff',
+        background: b.color,
+        padding: '2px 7px',
+        borderRadius: 6
+      }
+    }, d));
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '8px 10px 6px',
+      fontSize: 12.5,
+      color: '#AEAEB2'
+    }
+  }, "0 days: No sales")));
+}
+
+// ─────────────────────────── Profit ───────────────────────────
+function BVPriceIn({
+  label,
+  value
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      flex: 1,
+      padding: '10px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: '#8E8E93',
+      fontWeight: 500
+    }
+  }, label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 2,
+      fontSize: 20,
+      fontWeight: 700,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, bvMoney(value)));
+}
+function BVProfitA({
+  r
+}) {
+  const sel = psInitSel(r) || {},
+    sell = sel.price || 20,
+    buy = PS_BUY_DEFAULT,
+    p = pfCalc(sell, buy);
+  const [ch, setCh] = React.useState('fba'),
+    c = p[ch];
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Profit"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement(BVPriceIn, {
+    label: "Sell for",
+    value: sell
+  }), /*#__PURE__*/React.createElement(BVPriceIn, {
+    label: "Buy cost",
+    value: buy
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement(BVSeg, {
+    items: [['fba', `FBA  ${bvMoney(p.fba.profit)}`], ['fbm', `FBM  ${bvMoney(p.fbm.profit)}`]],
+    value: ch,
+    onChange: setCh
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      margin: '20px 0 6px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13.5,
+      color: '#8E8E93',
+      fontWeight: 500
+    }
+  }, "You keep"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 44,
+      fontWeight: 700,
+      color: c.profit >= 0 ? '#157A3E' : BV_RED
+    }
+  }, bvMoney(c.profit))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px',
+      marginTop: 10
+    }
+  }, c.rows.map(([k, v], i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 14.5,
+      color: '#6C6C70'
+    }
+  }, k), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14.5,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, bvMoney(v))), i === 0, {
+    padding: '10px 0'
+  })), bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 14.5,
+      fontWeight: 600
+    }
+  }, "Fees + buy cost"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14.5,
+      fontWeight: 600
+    }
+  }, bvMoney(c.total + buy))), false, {
+    padding: '11px 0'
+  })));
+}
+function BVProfitB({
+  r
+}) {
+  const sel = psInitSel(r) || {},
+    sell = sel.price || 20,
+    buy = PS_BUY_DEFAULT,
+    p = pfCalc(sell, buy);
+  const best = p.fba.profit >= p.fbm.profit ? 'fba' : 'fbm',
+    diff = Math.abs(p.fba.profit - p.fbm.profit);
+  const line = (k, l) => /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '14px 0',
+      borderTop: k === 'fbm' ? bvHair : 'none'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 16,
+      fontWeight: 700,
+      width: 48
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 13.5,
+      color: '#8E8E93'
+    }
+  }, "Fees ", bvMoney(p[k].total)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 24,
+      fontWeight: 700,
+      color: p[k].profit >= 0 ? k === best ? '#157A3E' : BV.text : BV_RED
+    }
+  }, bvMoney(p[k].profit)), bvIcon.chev());
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Profit",
+    align: "left",
+    sub: `Selling at ${bvMoney(sell)}, bought for ${bvMoney(buy)}`
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '2px 16px'
+    }
+  }, line('fba', 'FBA'), line('fbm', 'FBM')), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12,
+      padding: '12px 16px',
+      borderRadius: 16,
+      background: 'rgba(22,163,74,0.08)',
+      fontSize: 14,
+      color: '#157A3E',
+      fontWeight: 600
+    }
+  }, best.toUpperCase(), " earns ", bvMoney(diff), " more on this item"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      marginTop: 16
+    }
+  }, /*#__PURE__*/React.createElement(BVPriceIn, {
+    label: "Sell for",
+    value: sell
+  }), /*#__PURE__*/React.createElement(BVPriceIn, {
+    label: "Buy cost",
+    value: buy
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px',
+      marginTop: 12
+    }
+  }, bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15
+    }
+  }, "Show on the scan page"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      color: '#8E8E93'
+    }
+  }, "By channel"), bvIcon.chev()), true)));
+}
+
+// ─────────────────────────── All offers ───────────────────────────
+const bvPrice = v => typeof v === 'number' ? v : parseFloat(v);
+function BVAllOffersA({
+  r
+}) {
+  const [k, setK] = React.useState(r.offers[0].k),
+    col = r.offers.find(c => c.k === k) || r.offers[0];
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "All offers",
+    maxH: "88%"
+  }, /*#__PURE__*/React.createElement(BVSeg, {
+    items: r.offers.map(c => [c.k, `${c.k} ${c.n}`]),
+    value: k,
+    onChange: setK
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px',
+      marginTop: 12
+    }
+  }, col.rows.map((v, i) => {
+    const m = (col.marks || []).find(x => x.idx === i);
+    return bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 22,
+        fontSize: 13,
+        color: '#AEAEB2',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, i + 1), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        fontSize: 17,
+        fontWeight: 600,
+        fontVariantNumeric: 'tabular-nums',
+        color: m && !m.underline ? m.color : BV.text
+      }
+    }, bvMoney(bvPrice(v))), m && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12.5,
+        fontWeight: 600,
+        color: m.underline ? '#F0A23A' : m.color
+      }
+    }, m.underline ? 'Amazon' : 'Buy Box')), i === 0, {
+      padding: '11px 0'
+    });
+  })));
+}
+function BVAllOffersB({
+  r
+}) {
+  const max = Math.max(...r.offers.map(c => c.rows.length));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "All offers",
+    maxH: "88%"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '6px 6px 10px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4,1fr)',
+      padding: '8px 0 10px',
+      borderBottom: bvHair
+    }
+  }, r.offers.map(c => /*#__PURE__*/React.createElement("div", {
+    key: c.k,
+    style: {
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700
+    }
+  }, c.k), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#AEAEB2'
+    }
+  }, c.n, " offers")))), Array.from({
+    length: max
+  }, (_, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4,1fr)',
+      padding: '7px 0',
+      background: i % 2 ? 'rgba(118,118,128,0.05)' : 'transparent',
+      borderRadius: 8
+    }
+  }, r.offers.map(c => {
+    const v = c.rows[i];
+    const m = (c.marks || []).find(x => x.idx === i);
+    return /*#__PURE__*/React.createElement("div", {
+      key: c.k,
+      style: {
+        textAlign: 'center',
+        fontSize: 15.5,
+        fontWeight: 600,
+        fontVariantNumeric: 'tabular-nums',
+        color: m && !m.underline ? m.color : '#1C1C1E',
+        textDecoration: m && m.underline ? 'underline' : 'none',
+        textDecorationColor: '#F0A23A',
+        textUnderlineOffset: 4
+      }
+    }, v != null ? bvPrice(v).toFixed(2) : '');
+  })))));
+}
+
+// ── All offers B–F: version A without the "47 offers · lowest first" line; small tweaks of its column heads and rows ──
+const BV_COLNAME = {
+  MU: 'FBM used',
+  FU: 'FBA used',
+  FN: 'FBA new',
+  MN: 'FBM new'
+};
+// opts: head = 'stack' (MU / FBM used / 16 offers) | 'count' (MU 16 / FBM used) | 'name' (FBM used / 16 offers)
+//       stripes, lines (hairlines instead of stripes), rank (row numbers), cents (small cents like the table on the page)
+function BVOffersT({
+  r,
+  o = {}
+}) {
+  const max = Math.max(...r.offers.map(c => c.rows.length));
+  const cols = o.rank ? '22px repeat(4,1fr)' : 'repeat(4,1fr)';
+  const head = c => o.head === 'count' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700
+    }
+  }, c.k, " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#AEAEB2',
+      fontWeight: 600
+    }
+  }, c.n)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#8E8E93',
+      marginTop: 1
+    }
+  }, BV_COLNAME[c.k])) : o.head === 'name' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13.5,
+      fontWeight: 700
+    }
+  }, BV_COLNAME[c.k]), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#AEAEB2',
+      marginTop: 1
+    }
+  }, c.n, " offers")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700
+    }
+  }, c.k), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#8E8E93',
+      marginTop: 1
+    }
+  }, BV_COLNAME[c.k]), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: '#AEAEB2',
+      marginTop: 1
+    }
+  }, c.n, " offers"));
+  const price = v => {
+    const n = bvPrice(v);
+    if (!o.cents && !o.lightCents) return n.toFixed(2);
+    const [a, b] = n.toFixed(2).split('.');
+    return o.lightCents ? /*#__PURE__*/React.createElement(React.Fragment, null, a, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '0.66em',
+        fontWeight: 500,
+        color: '#8E8E93',
+        verticalAlign: '0.45em',
+        marginLeft: 1
+      }
+    }, b)) : /*#__PURE__*/React.createElement(React.Fragment, null, a, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '0.62em',
+        verticalAlign: '0.5em',
+        marginLeft: 1
+      }
+    }, b));
+  };
+  const L = React.useContext(BV_LIVE),
+    pick = L && L.onSelect;
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "All offers",
+    maxH: "88%"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '6px 6px 10px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: cols,
+      padding: '8px 0 10px',
+      borderBottom: bvHair
+    }
+  }, o.rank && /*#__PURE__*/React.createElement("span", null), r.offers.map(c => /*#__PURE__*/React.createElement("div", {
+    key: c.k,
+    style: {
+      textAlign: 'center'
+    }
+  }, head(c)))), Array.from({
+    length: max
+  }, (_, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: 'grid',
+      gridTemplateColumns: cols,
+      alignItems: 'center',
+      padding: o.cents ? '6px 0' : '7px 0',
+      borderRadius: 8,
+      background: o.stripes !== false && !o.lines && i % 2 ? 'rgba(118,118,128,0.05)' : 'transparent',
+      borderTop: o.lines && i ? bvHair : 'none'
+    }
+  }, o.rank && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11.5,
+      color: '#C7C7CC',
+      textAlign: 'right',
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, i + 1), r.offers.map(c => {
+    const v = c.rows[i];
+    const m = (c.marks || []).find(x => x.idx === i);
+    const sid = `${c.k}-${i}`,
+      isSel = pick && L.selectedId === sid && v != null;
+    return /*#__PURE__*/React.createElement("div", {
+      key: c.k,
+      onClick: () => pick && v != null && pick(sid, bvPrice(v)),
+      style: {
+        cursor: pick && v != null ? 'pointer' : 'default',
+        borderRadius: 8,
+        margin: '0 3px',
+        boxShadow: isSel ? 'inset 0 0 0 2px #0A84FF' : 'none',
+        textAlign: 'center',
+        fontSize: o.cents ? 18 : 15.5,
+        fontWeight: o.cents ? 700 : 600,
+        fontVariantNumeric: 'tabular-nums',
+        color: m && !m.underline ? m.color : '#1C1C1E',
+        textDecoration: m && m.underline ? 'underline' : 'none',
+        textDecorationColor: '#F0A23A',
+        textUnderlineOffset: 4
+      }
+    }, v != null ? price(v) : '');
+  })))));
+}
+
+// ── Recent sales B–E: the Sold Days 180-day grid (each square a day; spotted sales coloured by column), the four
+// columns in their own colours, a short disclaimer; B and D open a column's sales on a sub-page ──
+const BV_RSC = {
+  MU: '#0A84FF',
+  FU: '#14B8A6',
+  FN: '#7E2FB8',
+  MN: '#8E8E93'
+};
+const BV_RS_NOTE = 'Amazon doesn’t share sales. We spot some of them from changes in the market, so these are estimates and probably don’t include every sale.';
+function bvRsGrid(sales, h) {
+  const at = {};
+  sales.forEach(x => {
+    at[179 - Math.min(179, x.days)] = x.ch;
+  });
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '16px',
+      marginTop: h || 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(30, 1fr)',
+      gap: 3
+    }
+  }, Array.from({
+    length: 180
+  }, (_, i) => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    style: {
+      aspectRatio: '1',
+      borderRadius: 2,
+      background: at[i] ? BV_RSC[at[i]] : 'rgba(60,60,67,0.10)'
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginTop: 10,
+      fontSize: 12.5,
+      color: '#8E8E93'
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "6 months ago"), /*#__PURE__*/React.createElement("span", null, "Today")));
+}
+const bvRsLegend = sales => /*#__PURE__*/React.createElement("div", {
+  style: {
+    display: 'flex',
+    gap: 14,
+    justifyContent: 'center',
+    marginTop: 10
+  }
+}, Object.entries(BV_RSC).filter(([k]) => sales.some(x => x.ch === k)).map(([k, c]) => /*#__PURE__*/React.createElement("span", {
+  key: k,
+  style: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 5,
+    fontSize: 12.5,
+    fontWeight: 600,
+    color: '#6C6C70'
+  }
+}, /*#__PURE__*/React.createElement("span", {
+  style: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    background: c
+  }
+}), k)));
+const bvRsNote = x => /*#__PURE__*/React.createElement("div", {
+  style: {
+    fontSize: 13,
+    lineHeight: 1.45,
+    color: '#8E8E93',
+    padding: '0 4px',
+    ...x
+  }
+}, BV_RS_NOTE);
+const bvRsRow = (x, i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+  style: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    background: BV_RSC[x.ch]
+  }
+}), /*#__PURE__*/React.createElement("span", {
+  style: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#6C6C70',
+    width: 28
+  }
+}, x.ch), /*#__PURE__*/React.createElement("span", {
+  style: {
+    flex: 1,
+    fontSize: 15,
+    color: '#3A3A3C'
+  }
+}, pstvAgo(x.days)), /*#__PURE__*/React.createElement("span", {
+  style: {
+    fontSize: 16,
+    fontWeight: 600
+  }
+}, "\u2248 $", x.price)), i === 0, {
+  padding: '11px 0'
+});
+// the shell for B / D: main page, or one column's sales on a sub-page
+function BVRsShell({
+  r,
+  children
+}) {
+  const s = pstvRecentSales(r),
+    [ch, setCh] = React.useState(null);
+  if (ch) {
+    const it = s.filter(x => x.ch === ch),
+      lo = Math.min(...it.map(x => x.price)),
+      hi = Math.max(...it.map(x => x.price));
+    return /*#__PURE__*/React.createElement(BVSheet, {
+      title: `${ch} · ${BV_COLNAME[ch]}`,
+      sub: `${it.length} sale${it.length > 1 ? 's' : ''} spotted · ${lo === hi ? `≈ $${lo}` : `$${lo}–$${hi}`}`,
+      right: /*#__PURE__*/React.createElement("span", {
+        onClick: () => setCh(null),
+        style: {
+          width: 34,
+          height: 34,
+          borderRadius: '50%',
+          background: '#fff',
+          boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 4px 12px rgba(15,15,20,0.10)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement("svg", {
+        width: "14",
+        height: "14",
+        viewBox: "0 0 16 16",
+        fill: "none"
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M10 3L5 8l5 5",
+        stroke: "#3A3A3C",
+        strokeWidth: "2.2",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      })))
+    }, bvRsGrid(it), /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...bvCard,
+        padding: '0 16px',
+        marginTop: 12
+      }
+    }, it.map((x, i) => bvRsRow(x, i))));
+  }
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Recent sales"
+  }, children(s, setCh));
+}
+const bvRsCols = s => ['MU', 'FU', 'FN', 'MN'].map(k => ({
+  k,
+  it: s.filter(x => x.ch === k)
+}));
+// typical sale price: used (MU + FU) and new (FN + MN), from the sales spotted — lo/hi, or none
+function bvRsTyp(s) {
+  return [['Used', ['MU', 'FU']], ['New', ['FN', 'MN']]].map(([l, cs]) => {
+    const p = s.filter(x => cs.includes(x.ch)).map(x => x.price);
+    const lo = p.length ? Math.min(...p) : null,
+      hi = p.length ? Math.max(...p) : null;
+    return {
+      l,
+      n: p.length,
+      lo,
+      hi,
+      txt: !p.length ? 'Not enough sales' : lo === hi ? `≈ $${lo}` : `$${lo}–$${hi}`
+    };
+  });
+}
+// the same data (used / new, lo–hi) drawn a few ways: B = two cards; C1–C4 below
+const BV_TP = {
+  // B: two cards side by side
+  cards: t => /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, t.map(x => /*#__PURE__*/React.createElement("div", {
+    key: x.l,
+    style: {
+      ...bvCard,
+      flex: 1,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: '#8E8E93'
+    }
+  }, x.l), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 3,
+      fontFamily: BV.fontDisplay,
+      fontSize: x.n ? 21 : 15,
+      fontWeight: 700,
+      color: x.n ? BV.text : '#AEAEB2'
+    }
+  }, x.txt)))),
+  // C1: one card, a row each — label left, price right
+  rows: t => /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, t.map((x, i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15.5,
+      color: '#3A3A3C'
+    }
+  }, x.l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: x.n ? 19 : 14.5,
+      fontWeight: 700,
+      color: x.n ? BV.text : '#AEAEB2',
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, x.txt)), i === 0, {
+    padding: '13px 0'
+  }))),
+  // C2: from / to — the low and high as two numbers under each condition
+  fromto: t => /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, t.map(x => /*#__PURE__*/React.createElement("div", {
+    key: x.l,
+    style: {
+      ...bvCard,
+      flex: 1,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: '#8E8E93'
+    }
+  }, x.l), !x.n ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6,
+      fontSize: 15,
+      fontWeight: 600,
+      color: '#AEAEB2'
+    }
+  }, "Not enough sales") : /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'flex-end',
+      gap: 8,
+      marginTop: 4
+    }
+  }, [['Low', x.lo], ['High', x.hi]].filter((y, j) => !j || x.hi !== x.lo).map(([k, v], j) => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: k
+  }, j > 0 && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 16,
+      color: '#C7C7CC',
+      paddingBottom: 3
+    }
+  }, "\u2013"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 600,
+      color: '#AEAEB2',
+      textTransform: 'uppercase',
+      letterSpacing: 0.4
+    }
+  }, x.hi === x.lo ? 'About' : k), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 22,
+      fontWeight: 700,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, "$", v)))))))),
+  // C3: range bars on one shared price scale, so used vs new reads at a glance
+  bars: t => {
+    const all = t.filter(x => x.n),
+      mn = Math.min(...all.map(x => x.lo)),
+      mx = Math.max(...all.map(x => x.hi)),
+      span = Math.max(1, mx - mn);
+    const pos = v => `${(v - mn) / span * 100}%`;
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...bvCard,
+        padding: '14px 16px 12px'
+      }
+    }, t.map((x, i) => /*#__PURE__*/React.createElement("div", {
+      key: x.l,
+      style: {
+        marginTop: i ? 14 : 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'baseline'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: 600,
+        color: '#3A3A3C'
+      }
+    }, x.l), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: x.n ? 15.5 : 13.5,
+        fontWeight: 700,
+        color: x.n ? BV.text : '#AEAEB2',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, x.txt)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'relative',
+        height: 8,
+        marginTop: 7,
+        borderRadius: 4,
+        background: 'rgba(60,60,67,0.08)'
+      }
+    }, x.n > 0 && /*#__PURE__*/React.createElement("span", {
+      style: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: pos(x.lo),
+        width: x.hi === x.lo ? 8 : `calc(${pos(x.hi)} - ${pos(x.lo)})`,
+        minWidth: 8,
+        marginLeft: x.hi === x.lo ? -4 : 0,
+        borderRadius: 4,
+        background: '#1C1C1E'
+      }
+    })))), all.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginTop: 8,
+        fontSize: 12,
+        color: '#AEAEB2',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, /*#__PURE__*/React.createElement("span", null, "$", mn), /*#__PURE__*/React.createElement("span", null, "$", mx)));
+  },
+  // C4: a plain sentence in one card
+  sentence: t => {
+    const [u, n] = t,
+      say = x => !x.n ? /*#__PURE__*/React.createElement("span", {
+        style: {
+          color: '#AEAEB2'
+        }
+      }, "not enough sales to tell") : /*#__PURE__*/React.createElement("b", {
+        style: {
+          fontWeight: 700,
+          color: BV.text
+        }
+      }, x.lo === x.hi ? `about $${x.lo}` : `$${x.lo}–$${x.hi}`);
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...bvCard,
+        padding: '14px 16px',
+        fontSize: 16,
+        lineHeight: 1.5,
+        color: '#3A3A3C'
+      }
+    }, "Used copies usually sell for ", say(u), "; new for ", say(n), ".");
+  }
+};
+// B: grid, then one row per column — its latest sale; tap a column for all its sales
+function BVSalesB2({
+  r,
+  tp = 'cards'
+}) {
+  return /*#__PURE__*/React.createElement(BVRsShell, {
+    r: r
+  }, (s, open) => /*#__PURE__*/React.createElement(React.Fragment, null, bvRsNote({
+    marginBottom: 12,
+    textAlign: 'center'
+  }), bvRsGrid(s), bvRsLegend(s), bvLabel('Typical sale price'), (BV_TP[tp] || BV_TP.cards)(bvRsTyp(s)), bvLabel('Sales spotted'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, bvRsCols(s).map(({
+    k,
+    it
+  }, i) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    onClick: () => it.length && open(k)
+  }, bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 8,
+      height: 8,
+      borderRadius: 2,
+      background: BV_RSC[k],
+      opacity: it.length ? 1 : 0.35
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600,
+      color: it.length ? '#3A3A3C' : '#AEAEB2'
+    }
+  }, k, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 500,
+      color: it.length ? '#8E8E93' : '#C7C7CC',
+      marginLeft: 8,
+      fontSize: 13.5
+    }
+  }, BV_COLNAME[k])), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 16,
+      fontWeight: 700,
+      color: it.length ? BV.text : '#C7C7CC',
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, it.length), bvIcon.chev(it.length ? '#C7C7CC' : '#E5E5EA')), i === 0, {
+    padding: '12px 0',
+    cursor: it.length ? 'pointer' : 'default'
+  }))))));
+}
+// ─────────────────────────── Offers settings ───────────────────────────
+function BVOffSetA() {
+  const [rows, setRows] = window.useBzPref('offersRows', '3');
+  const [scroll, setScroll] = window.useBzPref('offersScroll', 'off');
+  const [left, setLeft] = window.useBzPref('offersLeft2', 'sales');
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Offers settings"
+  }, bvLabel('Offers in the table', {
+    marginTop: 4
+  }), /*#__PURE__*/React.createElement(BVSeg, {
+    items: ['3', '4', '5', '6'].map(k => [k, k]),
+    value: rows,
+    onChange: setRows
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px',
+      marginTop: 16
+    }
+  }, bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15.5
+    }
+  }, "Scroll the table"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: '#8E8E93',
+      marginTop: 2
+    }
+  }, "See more offers in place")), /*#__PURE__*/React.createElement(BVSwitch, {
+    on: scroll === 'on'
+  })), true, {
+    cursor: 'pointer',
+    onClick: () => setScroll(scroll === 'on' ? 'off' : 'on')
+  })), bvLabel('Under the table'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 8
+    }
+  }, [['sales', 'Recent sales'], ['amz', 'Amazon'], ['asin', 'ASIN'], ['none', 'Nothing']].map(([k, l]) => /*#__PURE__*/React.createElement("span", {
+    key: k,
+    onClick: () => setLeft(k),
+    style: {
+      padding: '9px 14px',
+      borderRadius: 999,
+      cursor: 'pointer',
+      fontSize: 14,
+      fontWeight: 600,
+      background: left === k ? '#1C1C1E' : '#fff',
+      color: left === k ? '#fff' : '#3A3A3C'
+    }
+  }, l))));
+}
+function BVOffSetB() {
+  const [rows, setRows] = window.useBzPref('offersRows', '3');
+  const [scroll, setScroll] = window.useBzPref('offersScroll', 'off');
+  const [left, setLeft] = window.useBzPref('offersLeft2', 'sales');
+  const [pg, setPg] = React.useState(null);
+  const R = window.BzRadioRow,
+    LEFT = typeof PSTV_OFF_LEFT !== 'undefined' ? PSTV_OFF_LEFT : [['sales', 'Recent sales'], ['amz', 'Amazon label'], ['asin', 'ASIN'], ['none', 'Nothing']];
+  if (pg) return /*#__PURE__*/React.createElement(BVSheet, {
+    title: pg === 'rows' ? 'Offers in the table' : 'Show under the table',
+    right: bvBack(() => setPg(null))
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '2px 16px'
+    }
+  }, pg === 'rows' ? ['3', '4', '5', '6'].map((k, i) => /*#__PURE__*/React.createElement(R, {
+    key: k,
+    first: !i,
+    on: rows === k,
+    onClick: () => setRows(k),
+    label: `${k} offers`,
+    hint: k === '3' ? 'Default' : null
+  })) : LEFT.map(([k, l, h], i) => /*#__PURE__*/React.createElement(R, {
+    key: k,
+    first: !i,
+    on: left === k,
+    onClick: () => setLeft(k),
+    label: l,
+    hint: h
+  }))));
+  const nav = (l, v, first, k) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15.5
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      color: '#8E8E93'
+    }
+  }, v), bvIcon.chev()), first, {
+    cursor: 'pointer',
+    onClick: () => setPg(k)
+  });
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Offers table settings"
+  }, bvLabel('Table', {
+    marginTop: 4
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, nav('Rows shown', rows, true, 'rows'), bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15.5
+    }
+  }, "Scroll inside the table"), /*#__PURE__*/React.createElement(BVSwitch, {
+    on: scroll === 'on'
+  })), false, {
+    cursor: 'pointer',
+    onClick: () => setScroll(scroll === 'on' ? 'off' : 'on')
+  })), bvLabel('Footer'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, nav('Left side', {
+    sales: 'Recent sales',
+    amz: 'Amazon label',
+    asin: 'ASIN',
+    none: 'Nothing'
+  }[left] || 'Recent sales', true, 'left')));
+}
+
+// ─────────────────────────── Recent sales ───────────────────────────
+function BVSalesA({
+  r
+}) {
+  const s = pstvRecentSales(r);
+  const groups = ['MU', 'FU', 'MN', 'FN'].map(k => ({
+    k,
+    l: s.filter(x => x.ch === k).map(x => x.price)
+  })).filter(g => g.l.length >= 3);
+  const buckets = [['Last month', d => d < 31], ['1–3 months ago', d => d >= 31 && d < 92], ['3–6 months ago', d => d >= 92]];
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Recent sales",
+    align: "left",
+    sub: "Estimates \xB7 a few examples, not every sale",
+    right: /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 30,
+        height: 30,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    }, bvIcon.info('#8E8E93'))
+  }, groups.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      flexWrap: 'wrap'
+    }
+  }, groups.map(g => {
+    const lo = Math.min(...g.l),
+      hi = Math.max(...g.l);
+    return /*#__PURE__*/React.createElement("div", {
+      key: g.k,
+      style: {
+        ...bvCard,
+        padding: '10px 14px'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12.5,
+        color: '#8E8E93',
+        fontWeight: 600
+      }
+    }, g.k, " sold around"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 18,
+        fontWeight: 700,
+        marginTop: 2
+      }
+    }, lo === hi ? `$${lo}` : `$${lo}–$${hi}`));
+  })), buckets.map(([l, f]) => {
+    const it = s.filter(x => f(x.days));
+    if (!it.length) return null;
+    return /*#__PURE__*/React.createElement(React.Fragment, {
+      key: l
+    }, bvLabel(l), /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...bvCard,
+        padding: '0 16px'
+      }
+    }, it.map((x, i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 14,
+        fontWeight: 700,
+        color: '#6C6C70',
+        width: 30
+      }
+    }, x.ch), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        fontSize: 15,
+        color: '#3A3A3C'
+      }
+    }, pstvAgo(x.days)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 16,
+        fontWeight: 600
+      }
+    }, "\u2248 $", x.price)), i === 0, {
+      padding: '11px 0'
+    }))));
+  }));
+}
+function BVSalesB({
+  r
+}) {
+  const s = pstvRecentSales(r),
+    mx = Math.max(...s.map(x => x.price), 1),
+    mn = Math.min(...s.map(x => x.price), 0);
+  const cc = {
+    MU: '#0A84FF',
+    FU: '#14B8A6',
+    MN: '#8E8E93',
+    FN: '#7E2FB8'
+  };
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Recent sales"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '16px 16px 12px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      height: 110
+    }
+  }, s.map((x, i) => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    style: {
+      position: 'absolute',
+      left: `${(1 - x.days / 180) * 92 + 2}%`,
+      bottom: `${(x.price - mn) / Math.max(1, mx - mn) * 80 + 6}%`,
+      width: 10,
+      height: 10,
+      borderRadius: '50%',
+      background: cc[x.ch],
+      boxShadow: '0 0 0 2px #fff'
+    }
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: 1,
+      background: BV.divider
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginTop: 6,
+      fontSize: 12,
+      color: '#AEAEB2'
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "6 months ago"), /*#__PURE__*/React.createElement("span", null, "Now")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 12,
+      marginTop: 10,
+      justifyContent: 'center'
+    }
+  }, Object.entries(cc).filter(([k]) => s.some(x => x.ch === k)).map(([k, c]) => /*#__PURE__*/React.createElement("span", {
+    key: k,
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 5,
+      fontSize: 12.5,
+      fontWeight: 600,
+      color: '#6C6C70'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      background: c
+    }
+  }), k)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px',
+      marginTop: 12
+    }
+  }, s.map((x, i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      background: cc[x.ch]
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: '#6C6C70',
+      width: 28
+    }
+  }, x.ch), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      color: '#3A3A3C'
+    }
+  }, pstvAgo(x.days)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 16,
+      fontWeight: 600
+    }
+  }, "\u2248 $", x.price)), i === 0, {
+    padding: '11px 0'
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14,
+      fontSize: 13,
+      lineHeight: 1.5,
+      color: '#8E8E93',
+      padding: '0 4px'
+    }
+  }, "Spotted from sales rank and offer changes. Estimates, and only some of the sales."));
+}
+
+// ─────────────────────────── Chart settings ───────────────────────────
+const BV_SERIES = () => (typeof LORDER !== 'undefined' ? LORDER : ['newbb', 'sr', 'amz', 'new', 'used']).map(k => [k, typeof LSERIES !== 'undefined' ? LSERIES[k] : {
+  label: k,
+  color: '#888'
+}]);
+function BVChartA() {
+  const [vis, setVis] = React.useState({
+    newbb: true,
+    sr: true,
+    amz: true,
+    new: true,
+    used: true
+  });
+  const [ax, setAx] = React.useState('top'),
+    [rg, setRg] = React.useState('6m');
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Chart settings"
+  }, bvLabel('Lines', {
+    marginTop: 4
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 8
+    }
+  }, BV_SERIES().map(([k, s]) => {
+    const on = vis[k];
+    return /*#__PURE__*/React.createElement("span", {
+      key: k,
+      onClick: () => setVis({
+        ...vis,
+        [k]: !on
+      }),
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        padding: '9px 14px',
+        borderRadius: 999,
+        cursor: 'pointer',
+        fontSize: 14,
+        fontWeight: 600,
+        background: on ? '#fff' : 'transparent',
+        color: on ? BV.text : '#AEAEB2',
+        boxShadow: on ? '0 1px 2px rgba(0,0,0,0.06)' : 'inset 0 0 0 1px rgba(60,60,67,0.16)'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 14,
+        height: 3,
+        borderRadius: 2,
+        background: on ? s.color : '#D1D1D6'
+      }
+    }), s.label);
+  })), bvLabel('Range'), /*#__PURE__*/React.createElement(BVSeg, {
+    items: [['3m', '3 months'], ['6m', '6 months']],
+    value: rg,
+    onChange: setRg
+  }), bvLabel('Best sales rank'), /*#__PURE__*/React.createElement(BVSeg, {
+    items: [['top', 'At the top'], ['bottom', 'At the bottom']],
+    value: ax,
+    onChange: setAx
+  }));
+}
+function BVChartB() {
+  const L = React.useContext(BV_LIVE),
+    e = L && L.keepa;
+  const [vis0, setVis0] = React.useState({
+    newbb: true,
+    sr: true,
+    amz: true,
+    new: true,
+    used: false
+  });
+  const [ax0, setAx0] = React.useState('top'),
+    [rg0, setRg0] = React.useState('6m');
+  const vis = e ? e.visible : vis0,
+    setVis = e ? e.setVisible : setVis0,
+    rg = e ? e.range : rg0,
+    setRg = e ? e.setRange : setRg0;
+  const ax = e ? e.srFlip ? 'bottom' : 'top' : ax0,
+    setAx = e ? k => e.setSrFlip(k === 'bottom') : setAx0;
+  const pick = (on, onClick, l, first, lead) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, lead, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15.5
+    }
+  }, l), on && /*#__PURE__*/React.createElement("svg", {
+    width: "17",
+    height: "17",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#0A84FF",
+    strokeWidth: "3",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M5 12.5l4.5 4.5L19 7"
+  }))), first, {
+    cursor: 'pointer',
+    padding: '12px 0'
+  });
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Chart settings",
+    align: "left"
+  }, bvLabel('Show', {
+    marginTop: 2
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, BV_SERIES().map(([k, s], i) => /*#__PURE__*/React.createElement("div", {
+    key: k
+  }, bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 16,
+      height: 3,
+      borderRadius: 2,
+      background: s.color
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15.5
+    }
+  }, s.label), /*#__PURE__*/React.createElement(BVSwitch, {
+    on: vis[k]
+  })), i === 0, {
+    padding: '9px 0',
+    cursor: 'pointer',
+    onClick: () => setVis({
+      ...vis,
+      [k]: !vis[k]
+    })
+  })))), bvLabel('Time range'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, [['3m', 'Last 3 months'], ['6m', 'Last 6 months']].map(([k, l], i) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    onClick: () => setRg(k)
+  }, pick(rg === k, null, l, i === 0)))), bvLabel('Sales rank axis'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, [['top', 'Best rank at the top'], ['bottom', 'Best rank at the bottom']].map(([k, l], i) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    onClick: () => setAx(k)
+  }, pick(ax === k, null, l, i === 0)))));
+}
+
+// ─────────────────────────── Your stock / past sales ───────────────────────────
+function BVStockA({
+  r
+}) {
+  const L = r.listings,
+    qty = L.reduce((s, x) => s + (x.quantity || 0), 0);
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Your stock",
+    align: "left",
+    sub: `${L.length} listings · ${qty} in stock`
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, L.map((x, i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15.5,
+      fontWeight: 600
+    }
+  }, x.condition, " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#AEAEB2',
+      fontWeight: 500
+    }
+  }, "\xB7 ", x.channel)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 2,
+      fontSize: 12.5,
+      color: '#AEAEB2',
+      fontFamily: 'ui-monospace, SFMono-Regular, monospace'
+    }
+  }, x.sku)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'right'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 17,
+      fontWeight: 700,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, bvMoney(x.currentPrice)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: '#8E8E93',
+      marginTop: 2
+    }
+  }, x.quantity, " in stock"))), i === 0))));
+}
+function BVStockB({
+  r
+}) {
+  const by = ['FBA', 'FBM'].map(c => ({
+    c,
+    l: r.listings.filter(x => x.channel === c)
+  })).filter(g => g.l.length);
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Your stock"
+  }, by.map(g => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: g.c
+  }, bvLabel(`${g.c} · ${g.l.reduce((s, x) => s + x.quantity, 0)} in stock`, {
+    marginTop: 6
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8
+    }
+  }, g.l.map(x => /*#__PURE__*/React.createElement("div", {
+    key: x.sku,
+    style: {
+      ...bvCard,
+      padding: '13px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      minWidth: 34,
+      height: 34,
+      padding: '0 6px',
+      boxSizing: 'border-box',
+      borderRadius: 10,
+      background: 'rgba(60,60,67,0.07)',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 14,
+      fontWeight: 700
+    }
+  }, "\xD7", x.quantity), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 600
+    }
+  }, x.condition), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: '#AEAEB2',
+      marginTop: 2
+    }
+  }, "Min ", bvMoney(x.minPrice), x.maxPrice ? ` · Max ${bvMoney(x.maxPrice)}` : '')), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 17,
+      fontWeight: 700
+    }
+  }, bvMoney(x.currentPrice))))))));
+}
+function BVPastA({
+  r
+}) {
+  const S = r.pastSales,
+    avg = S.reduce((s, x) => s + x.salePrice, 0) / Math.max(1, S.length);
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Your past sales",
+    align: "left",
+    sub: `${S.length} sold · average ${bvMoney(avg)}`
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, S.map((x, i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15.5,
+      fontWeight: 600
+    }
+  }, x.condition, " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#AEAEB2',
+      fontWeight: 500
+    }
+  }, "\xB7 ", x.channel)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 2,
+      fontSize: 12.5,
+      color: '#AEAEB2'
+    }
+  }, x.soldAt)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 17,
+      fontWeight: 700,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, bvMoney(x.salePrice))), i === 0))));
+}
+function BVPastB({
+  r
+}) {
+  const S = r.pastSales,
+    hi = Math.max(...S.map(x => x.salePrice)),
+    lo = Math.min(...S.map(x => x.salePrice));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Your past sales"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, [['Sold', S.length], ['Lowest', bvMoney(lo)], ['Highest', bvMoney(hi)]].map(([k, v]) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    style: {
+      ...bvCard,
+      flex: 1,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: '#8E8E93',
+      fontWeight: 500
+    }
+  }, k), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 19,
+      fontWeight: 700,
+      marginTop: 2
+    }
+  }, v)))), bvLabel('Latest first'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, S.map((x, i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      color: '#8E8E93',
+      width: 92
+    }
+  }, x.soldAt), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 14.5
+    }
+  }, x.channel, " \xB7 ", x.condition), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 16,
+      fontWeight: 700
+    }
+  }, bvMoney(x.salePrice))), i === 0, {
+    padding: '11px 0'
+  }))));
+}
+
+// ─────────────────────────── Search ───────────────────────────
+function BVKeys({
+  v,
+  setV
+}) {
+  const k = c => /*#__PURE__*/React.createElement("div", {
+    key: c,
+    onClick: () => setV(c === '⌫' ? v.slice(0, -1) : (v + c).slice(0, 13)),
+    style: {
+      height: 50,
+      borderRadius: 12,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      background: c === '⌫' || c === '978' ? 'transparent' : '#fff',
+      fontSize: c === '978' ? 17 : 24,
+      fontWeight: 500
+    }
+  }, c);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3,1fr)',
+      gap: 8
+    }
+  }, ['1', '2', '3', '4', '5', '6', '7', '8', '9', '978', '0', '⌫'].map(k));
+}
+function BVSearchA() {
+  const [v, setV] = React.useState('978'),
+    [m, setM] = React.useState('cl');
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Search",
+    maxH: "90%"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '16px',
+      textAlign: 'center',
+      fontSize: 28,
+      fontWeight: 600,
+      letterSpacing: 2,
+      fontVariantNumeric: 'tabular-nums',
+      minHeight: 34
+    }
+  }, v || /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#C7C7CC',
+      fontSize: 20,
+      letterSpacing: 0
+    }
+  }, "ISBN")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement(BVSeg, {
+    small: true,
+    items: [['lv', 'Live'], ['cl', 'Cloud'], ['db', 'Local']],
+    value: m,
+    onChange: setM
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement(BVKeys, {
+    v: v,
+    setV: setV
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12,
+      height: 52,
+      borderRadius: 16,
+      background: '#1C1C1E',
+      color: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 16.5,
+      fontWeight: 700
+    }
+  }, "Search"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      marginTop: 12,
+      fontSize: 14,
+      fontWeight: 600,
+      color: '#0A84FF'
+    }
+  }, "Search by title instead"));
+}
+function BVSearchB() {
+  const recent = [['9780735211292', 'Atomic Habits'], ['9780062316097', 'Sapiens'], ['0141894156', 'Educated']];
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Search",
+    align: "left",
+    maxH: "90%"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      height: 48,
+      borderRadius: 14,
+      background: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 9,
+      padding: '0 14px'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "17",
+    height: "17",
+    viewBox: "0 0 18 18",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "8",
+    cy: "8",
+    r: "5.5",
+    stroke: "#8E8E93",
+    strokeWidth: "2"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12.5 12.5L16 16",
+    stroke: "#8E8E93",
+    strokeWidth: "2",
+    strokeLinecap: "round"
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 16.5,
+      color: '#AEAEB2'
+    }
+  }, "ISBN, ASIN or title")), /*#__PURE__*/React.createElement("span", {
+    style: {
+      height: 48,
+      padding: '0 14px',
+      borderRadius: 14,
+      background: 'rgba(10,132,255,0.12)',
+      color: '#0A84FF',
+      display: 'inline-flex',
+      alignItems: 'center',
+      fontSize: 14,
+      fontWeight: 700
+    }
+  }, "Cloud")), bvLabel('Recent'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 16px'
+    }
+  }, recent.map(([n, t], i) => bvRow(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("svg", {
+    width: "16",
+    height: "16",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#AEAEB2",
+    strokeWidth: "2",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "9"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 7v5l3 2"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15.5,
+      fontWeight: 600
+    }
+  }, t), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: '#AEAEB2',
+      marginTop: 2,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, n)), bvIcon.chev()), i === 0))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16,
+      fontSize: 13,
+      color: '#8E8E93',
+      textAlign: 'center'
+    }
+  }, "The number keypad opens when you tap the search field"));
+}
+
+// ── Your stock / Your past sales (from feedback): the current list, in the newer card style — channel and condition as
+// coloured words (not badges), the fact first ("12 in stock" / "Sold Dec 24"), price on the right with Min / Max under it ──
+function BVYoursList({
+  r,
+  kind
+}) {
+  const sales = kind === 'sales',
+    items = sales ? r.pastSales : r.listings;
+  const CH = window.ORDER_CHIP || {},
+    gray = '#8E8E93',
+    gray2 = '#AEAEB2';
+  const m = v => v == null ? '—' : '$' + Number(v).toFixed(2);
+  const sd = t => String(t || '').replace(/^([A-Za-z]{3,})\.? 0?(\d+)/, '$1 $2');
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: sales ? 'Your past sales' : 'Your stock',
+    maxH: "88%"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      boxShadow: TOKENS.shadow,
+      overflow: 'hidden',
+      marginTop: 4
+    }
+  }, items.map((l, i) => {
+    const ch = CH[l.channel] || {
+        fg: '#0064D1'
+      },
+      cd = l.condition === 'New' ? CH.New || {
+        fg: '#7E2FB8'
+      } : CH.Used || {
+        fg: '#0E9488'
+      };
+    const cond = String(l.condition || '').toLowerCase().replace(/^\w/, a => a.toUpperCase());
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12,
+        padding: '14px 18px',
+        borderTop: i ? bvHair : 'none'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 7,
+        fontFamily: BV.fontDisplay,
+        fontSize: 16,
+        fontWeight: 650,
+        letterSpacing: -0.2,
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, sales ? /*#__PURE__*/React.createElement(React.Fragment, null, "Sold", /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontFamily: BV.font,
+        fontSize: 13.5,
+        fontWeight: 500,
+        color: gray
+      }
+    }, sd(l.soldAt))) : `${l.quantity} in stock`), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 3,
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+        color: ch.fg
+      }
+    }, l.channel), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12.5,
+        fontWeight: 600,
+        color: cd.fg
+      }
+    }, cond)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 5,
+        fontSize: 12,
+        color: gray2,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        letterSpacing: 0.2
+      }
+    }, l.sku)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontFamily: BV.fontDisplay,
+        fontSize: 18.5,
+        fontWeight: 700,
+        letterSpacing: -0.3,
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, m(sales ? l.salePrice : l.currentPrice)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        marginTop: 4,
+        display: 'inline-grid',
+        gridTemplateColumns: 'auto auto',
+        columnGap: 7,
+        rowGap: 3
+      }
+    }, [['Min', l.minPrice], ['Max', l.maxPrice]].map(([k, v]) => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: k
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        color: gray2
+      }
+    }, k), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        color: v != null ? gray : gray2,
+        textAlign: 'right',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, m(v)))))));
+  })));
+}
+
+// ── Search (from feedback): closer to the current sheet (field + mode, ISBN / Title, number keys, history + Search) ──
+const BV_SM = {
+  lv: ['LV', 'Live', '#1B9E51'],
+  cl: ['CL', 'Cloud', '#0A84FF'],
+  db: ['DB', 'Local', '#7E2FB8']
+};
+function BVSearchShell({
+  children,
+  h = 470,
+  kb
+}) {
+  const L = React.useContext(BV_LIVE);
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    onClick: L ? L.onClose : undefined,
+    style: {
+      position: 'absolute',
+      inset: 0,
+      zIndex: 44,
+      background: 'rgba(8,8,14,0.40)',
+      ...bvLiveBg(L)
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 45,
+      height: h === 'auto' ? undefined : h,
+      background: BV.sheetBg,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      boxShadow: bzSheetShadow(),
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      fontFamily: BV.font,
+      color: BV.text,
+      ...bvLiveSheet(L)
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: L ? L.onClose : undefined,
+    style: {
+      padding: '10px 0 0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 36,
+      height: 5,
+      borderRadius: 999,
+      background: 'rgba(60,60,67,0.22)',
+      margin: '0 auto'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minHeight: 0,
+      padding: kb ? '10px 16px 12px' : '10px 16px 22px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12
+    }
+  }, children), kb));
+}
+const bvGlass = x => /*#__PURE__*/React.createElement("svg", {
+  width: "17",
+  height: "17",
+  viewBox: "0 0 18 18",
+  fill: "none",
+  style: {
+    flexShrink: 0,
+    ...x
+  }
+}, /*#__PURE__*/React.createElement("circle", {
+  cx: "8",
+  cy: "8",
+  r: "5.5",
+  stroke: "#8E8E93",
+  strokeWidth: "2"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M12.5 12.5L16 16",
+  stroke: "#8E8E93",
+  strokeWidth: "2",
+  strokeLinecap: "round"
+}));
+const bvHistIco = /*#__PURE__*/React.createElement("svg", {
+  width: "19",
+  height: "19",
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "#3A3A3C",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round"
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M3 12a9 9 0 1 0 3-6.7L3 8"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M3 3v5h5"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M12 7v5l3 2"
+}));
+function BVPad({
+  v,
+  setV,
+  look,
+  keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '978', '0', '⌫'],
+  onAbc
+}) {
+  const tap = c => c === 'ABC' ? onAbc && onAbc() : setV(c === '⌫' ? v.slice(0, -1) : (v + c).slice(0, 13));
+  const st = c => {
+    const quiet = c === '⌫' || c === 'ABC'; // 978 is used a lot, so it gets a real key
+    if (look === 'flat') return {
+      background: quiet ? 'transparent' : 'rgba(118,118,128,0.10)',
+      boxShadow: 'none'
+    };
+    return {
+      background: quiet ? 'transparent' : '#fff',
+      boxShadow: quiet ? 'none' : '0 1px 0 rgba(0,0,0,0.12)'
+    };
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3,1fr)',
+      gap: 7,
+      flex: 1
+    }
+  }, keys.map(c => /*#__PURE__*/React.createElement("div", {
+    key: c,
+    onClick: () => tap(c),
+    style: {
+      borderRadius: 11,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      fontSize: c.length > 1 && c !== '⌫' ? 16 : 24,
+      fontWeight: c.length > 1 && c !== '⌫' ? 600 : 400,
+      color: c === 'ABC' ? '#0A84FF' : BV.text,
+      ...st(c)
+    }
+  }, c === '⌫' ? /*#__PURE__*/React.createElement("svg", {
+    width: "24",
+    height: "18",
+    viewBox: "0 0 24 18",
+    fill: "none",
+    stroke: "#3A3A3C",
+    strokeWidth: "1.8",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M8 1h13a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8L1 9l7-8z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M11 6l6 6M17 6l-6 6",
+    strokeLinecap: "round"
+  })) : c)));
+}
+const bvSearchBtn = (v, x) => /*#__PURE__*/React.createElement("div", {
+  style: {
+    flex: 1,
+    height: 50,
+    borderRadius: 15,
+    background: '#1C1C1E',
+    color: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    fontSize: 16.5,
+    fontWeight: 700,
+    ...x
+  }
+}, /*#__PURE__*/React.createElement("svg", {
+  width: "16",
+  height: "16",
+  viewBox: "0 0 18 18",
+  fill: "none"
+}, /*#__PURE__*/React.createElement("circle", {
+  cx: "8",
+  cy: "8",
+  r: "5.5",
+  stroke: "#fff",
+  strokeWidth: "2.2"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M12.5 12.5L16 16",
+  stroke: "#fff",
+  strokeWidth: "2.2",
+  strokeLinecap: "round"
+})), "Search");
+// A: the current layout, calmer — the number large in the field, mode as a coloured code in it, ISBN / Title as text tabs, flat keys
+function BVSearchA2() {
+  const [v, setV] = React.useState('9780'),
+    [t, setT] = React.useState('isbn');
+  const m = BV_SM.cl;
+  return /*#__PURE__*/React.createElement(BVSearchShell, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 54,
+      borderRadius: 16,
+      background: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '0 8px 0 14px'
+    }
+  }, bvGlass(), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 21,
+      fontWeight: 600,
+      letterSpacing: 1.2,
+      fontVariantNumeric: 'tabular-nums',
+      color: v ? BV.text : '#C7C7CC'
+    }
+  }, v || 'ISBN', /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-block',
+      width: 2,
+      height: 22,
+      background: '#0A84FF',
+      verticalAlign: -3,
+      marginLeft: 2
+    }
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      height: 34,
+      padding: '0 10px',
+      borderRadius: 10,
+      background: `${m[2]}1A`,
+      color: m[2],
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 5,
+      fontSize: 14,
+      fontWeight: 800,
+      letterSpacing: 0.4
+    }
+  }, m[0], /*#__PURE__*/React.createElement("svg", {
+    width: "9",
+    height: "6",
+    viewBox: "0 0 10 7",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M1 1.2l4 4 4-4",
+    stroke: m[2],
+    strokeWidth: "1.9",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  })))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 22,
+      padding: '0 6px'
+    }
+  }, [['isbn', 'ISBN'], ['title', 'Title']].map(([k, l]) => /*#__PURE__*/React.createElement("span", {
+    key: k,
+    onClick: () => setT(k),
+    style: {
+      fontSize: 15,
+      fontWeight: 600,
+      cursor: 'pointer',
+      color: t === k ? BV.text : '#AEAEB2',
+      paddingBottom: 4,
+      borderBottom: t === k ? `2px solid ${BV.text}` : '2px solid transparent'
+    }
+  }, l))), /*#__PURE__*/React.createElement(BVPad, {
+    v: v,
+    setV: setV,
+    look: "flat"
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 50,
+      height: 50,
+      borderRadius: 15,
+      background: '#fff',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, bvHistIco), bvSearchBtn(v)));
+}
+// B: the search mode as a three-way switch under the field; Title is a key (ABC) instead of a tab row
+function BVSearchB2() {
+  const [v, setV] = React.useState(''),
+    [md, setMd] = React.useState('cl');
+  return /*#__PURE__*/React.createElement(BVSearchShell, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 50,
+      borderRadius: 14,
+      background: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '0 14px'
+    }
+  }, bvGlass(), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 18,
+      fontWeight: v ? 600 : 400,
+      letterSpacing: v ? 1 : 0,
+      color: v ? BV.text : '#AEAEB2',
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v || 'ISBN or title')), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      background: 'rgba(118,118,128,0.12)',
+      borderRadius: 11,
+      padding: 2
+    }
+  }, Object.entries(BV_SM).map(([k, [c, l, col]]) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    onClick: () => setMd(k),
+    style: {
+      flex: 1,
+      height: 32,
+      borderRadius: 9,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      cursor: 'pointer',
+      fontSize: 13.5,
+      fontWeight: 600,
+      background: md === k ? '#fff' : 'transparent',
+      boxShadow: md === k ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+      color: md === k ? BV.text : '#6C6C70'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 7,
+      height: 7,
+      borderRadius: '50%',
+      background: col,
+      opacity: md === k ? 1 : 0.5
+    }
+  }), l))), /*#__PURE__*/React.createElement(BVPad, {
+    v: v,
+    setV: setV,
+    keys: ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'ABC', '0', '⌫']
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      height: 50,
+      padding: '0 16px',
+      borderRadius: 15,
+      background: '#fff',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 7,
+      fontSize: 15,
+      fontWeight: 600
+    }
+  }, bvHistIco, "History"), bvSearchBtn(v)));
+}
+// C: the last few searches as a row of chips above the keys (no separate history page needed for the usual case)
+function BVSearchC2() {
+  const [v, setV] = React.useState(''),
+    [t, setT] = React.useState('isbn');
+  const m = BV_SM.cl,
+    recent = ['Atomic Habits', 'Dune', 'Sapiens', 'Educated'];
+  return /*#__PURE__*/React.createElement(BVSearchShell, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      height: 50,
+      borderRadius: 14,
+      background: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '0 14px'
+    }
+  }, bvGlass(), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 18,
+      fontWeight: v ? 600 : 400,
+      letterSpacing: v ? 1 : 0,
+      color: v ? BV.text : '#AEAEB2',
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v || (t === 'isbn' ? 'ISBN' : 'Title'))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 50,
+      height: 50,
+      borderRadius: 14,
+      background: m[2],
+      color: '#fff',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 14,
+      fontWeight: 800,
+      letterSpacing: 0.4
+    }
+  }, m[0])), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 7,
+      overflow: 'hidden',
+      whiteSpace: 'nowrap'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    onClick: () => setT(t === 'isbn' ? 'title' : 'isbn'),
+    style: {
+      padding: '7px 12px',
+      borderRadius: 999,
+      background: '#1C1C1E',
+      color: '#fff',
+      fontSize: 13,
+      fontWeight: 700,
+      cursor: 'pointer',
+      flexShrink: 0
+    }
+  }, t === 'isbn' ? 'ISBN' : 'Title'), recent.map(x => /*#__PURE__*/React.createElement("span", {
+    key: x,
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 5,
+      padding: '7px 12px',
+      borderRadius: 999,
+      background: '#fff',
+      fontSize: 13,
+      fontWeight: 500,
+      color: '#3A3A3C',
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "12",
+    height: "12",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#AEAEB2",
+    strokeWidth: "2.4",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "9"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 7v5l3 2"
+  })), x))), /*#__PURE__*/React.createElement(BVPad, {
+    v: v,
+    setV: setV
+  }), bvSearchBtn(v, {
+    flex: 'none'
+  }));
+}
+
+// ───────────── Product details — 10 short versions (A–J). Same information as the current sheet, minus star ratings,
+// rating counts and extra photos. Copy works on every identifier (tap → "Copied"). Shorter is better. ─────────────
+function bvPd(r) {
+  const book = r.category === 'Book';
+  return {
+    book,
+    cat: book ? `Book · ${r.binding || '—'}` : r.amazonCategory || 'Non-book',
+    catC: book ? '#0064D1' : '#52525C',
+    title: r.title,
+    pages: r.pages,
+    weight: bvWeight(r.weight),
+    pub: r.publisher,
+    date: r.publishDate || bvYear(r),
+    year: bvYear(r),
+    price: r.listPrice != null ? bvMoney(r.listPrice) : null,
+    ids: [['ASIN', r.asin], ['ISBN-13', r.isbn13], ['ISBN-10', r.isbn10]].filter(x => x[1])
+  };
+}
+function useBvCopy() {
+  const [k, setK] = React.useState(null);
+  const copy = key => {
+    setK(key);
+    setTimeout(() => setK(c => c === key ? null : c), 1100);
+  };
+  return [k, copy];
+}
+const bvCopyIco = (c = '#0A84FF', s = 15) => /*#__PURE__*/React.createElement("svg", {
+  width: s,
+  height: s,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: c,
+  strokeWidth: "2.1",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  style: {
+    flexShrink: 0
+  }
+}, /*#__PURE__*/React.createElement("rect", {
+  x: "9",
+  y: "9",
+  width: "12",
+  height: "12",
+  rx: "2.5"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M5 15V5a2 2 0 0 1 2-2h10"
+}));
+const bvCopied = (s = 13) => /*#__PURE__*/React.createElement("span", {
+  style: {
+    fontSize: s,
+    fontWeight: 700,
+    color: '#16A34A'
+  }
+}, "Copied");
+const bvCover = (r, w, h, rad = 7) => /*#__PURE__*/React.createElement("div", {
+  style: {
+    flexShrink: 0,
+    borderRadius: rad,
+    boxShadow: '0 4px 12px rgba(15,15,20,0.16)'
+  }
+}, /*#__PURE__*/React.createElement("div", {
+  style: {
+    borderRadius: rad,
+    overflow: 'hidden'
+  }
+}, /*#__PURE__*/React.createElement(PSCover, {
+  w: w,
+  h: h,
+  r: rad,
+  src: r.cover
+})));
+const bvCat = (d, x) => /*#__PURE__*/React.createElement("div", {
+  style: {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: d.catC,
+    ...x
+  }
+}, d.cat);
+const bvTitle = (d, sz = 16.5, x) => /*#__PURE__*/React.createElement("div", {
+  style: {
+    fontFamily: BV.fontDisplay,
+    fontSize: sz,
+    fontWeight: 700,
+    letterSpacing: -0.2,
+    lineHeight: 1.28,
+    overflowWrap: 'anywhere',
+    ...x
+  }
+}, d.title);
+const bvGray = (t, x) => t ? /*#__PURE__*/React.createElement("div", {
+  style: {
+    fontSize: 13,
+    color: '#8E8E93',
+    lineHeight: 1.35,
+    ...x
+  }
+}, t) : null;
+const bvJoin = (...a) => a.filter(Boolean).join(' · ');
+const bvHead = (r, d, lines, cw = 52, ch = 76) => /*#__PURE__*/React.createElement("div", {
+  style: {
+    display: 'flex',
+    gap: 13,
+    alignItems: 'flex-start'
+  }
+}, bvCover(r, cw, ch), /*#__PURE__*/React.createElement("div", {
+  style: {
+    flex: 1,
+    minWidth: 0,
+    paddingTop: 1
+  }
+}, bvCat(d), bvTitle(d, 16.5, {
+  marginTop: 4
+}), lines.map((l, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+  key: i
+}, bvGray(l, {
+  marginTop: i ? 1 : 4
+})))));
+const bvCardP = {
+  background: '#fff',
+  borderRadius: 18
+};
+
+// A · One card: header facts, then the three identifiers as tight rows with a copy icon
+function BVPdA({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy();
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, bvHead(r, d, [bvJoin(d.pages && `${d.pages} pages`, d.weight), bvJoin(d.pub, d.date), d.price && `List price ${d.price}`]), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      padding: '0 14px',
+      marginTop: 14
+    }
+  }, d.ids.map(([l, v], i) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    onClick: () => copy(l),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      height: 42,
+      borderTop: i ? bvHair : 'none',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 62,
+      fontSize: 13.5,
+      color: '#8E8E93'
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), k === l ? bvCopied() : bvCopyIco()))));
+}
+// B · Identifier switch: one value at a time with a Copy button — the shortest way to keep all three
+function BVPdB({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy(),
+    [id, setId] = React.useState(d.ids[0][0]);
+  const cur = d.ids.find(x => x[0] === id) || d.ids[0];
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, bvHead(r, d, [bvJoin(d.pages && `${d.pages} pages`, d.weight, d.year), bvJoin(d.pub, d.price && `List ${d.price}`)]), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement(BVSeg, {
+    small: true,
+    items: d.ids.map(([l]) => [l, l]),
+    value: id,
+    onChange: setId
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 8,
+      padding: '0 8px 0 16px',
+      height: 52,
+      display: 'flex',
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 19,
+      fontWeight: 700,
+      letterSpacing: 0.6,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, cur[1]), /*#__PURE__*/React.createElement("span", {
+    onClick: () => copy(cur[0]),
+    style: {
+      height: 36,
+      padding: '0 14px',
+      borderRadius: 11,
+      background: k === cur[0] ? 'rgba(22,163,74,0.12)' : 'rgba(10,132,255,0.12)',
+      color: k === cur[0] ? '#16A34A' : '#0A84FF',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      fontSize: 14,
+      fontWeight: 700,
+      cursor: 'pointer'
+    }
+  }, k === cur[0] ? 'Copied' : /*#__PURE__*/React.createElement(React.Fragment, null, bvCopyIco(), "Copy"))));
+}
+// C · Copy chips: the identifiers as three small tappable chips under a compact header
+function BVPdC({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy();
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, bvHead(r, d, [bvJoin(d.pages && `${d.pages} pages`, d.weight), bvJoin(d.pub, d.date)]), d.price && /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 14,
+      padding: '0 16px',
+      height: 46,
+      display: 'flex',
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 14.5,
+      color: '#6C6C70'
+    }
+  }, "List price"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 16,
+      fontWeight: 700
+    }
+  }, d.price)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6,
+      marginTop: 10
+    }
+  }, d.ids.map(([l, v]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    onClick: () => copy(l),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '9px 12px',
+      borderRadius: 12,
+      background: 'rgba(118,118,128,0.10)',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: '#8E8E93',
+      width: 54
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 14.5,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), k === l ? bvCopied(12) : bvCopyIco('#8E8E93', 14)))));
+}
+// D · Facts grid: four small facts in two columns, no row lines; identifiers below with "Copy"
+function BVPdD({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy();
+  const f = (l, v) => /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#8E8E93'
+    }
+  }, l), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 600,
+      marginTop: 2
+    }
+  }, v || '—'));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, bvHead(r, d, [], 48, 70), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 12,
+      padding: '12px 16px',
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      rowGap: 10,
+      columnGap: 14
+    }
+  }, f('List price', d.price), f('Pages · Weight', bvJoin(d.pages, d.weight)), f('Publisher', d.pub), f('Published', d.date)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 8,
+      padding: '2px 14px'
+    }
+  }, d.ids.map(([l, v], i) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      height: 40,
+      borderTop: i ? bvHair : 'none'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 64,
+      fontSize: 13.5,
+      color: '#8E8E93'
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 14.5,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), /*#__PURE__*/React.createElement("span", {
+    onClick: () => copy(l),
+    style: {
+      fontSize: 13.5,
+      fontWeight: 600,
+      color: k === l ? '#16A34A' : '#0A84FF',
+      cursor: 'pointer'
+    }
+  }, k === l ? 'Copied' : 'Copy')))));
+}
+// E · No title bar: the book is the header; one quiet facts line; identifiers in one row of three
+function BVPdE({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy();
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: ""
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '14px 44px 0 0'
+    }
+  }, bvHead(r, d, [bvJoin(d.pages && `${d.pages} pp`, d.weight, d.year), bvJoin(d.pub, d.price && `List ${d.price}`)], 56, 82)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr 1fr',
+      gap: 6,
+      marginTop: 14
+    }
+  }, d.ids.map(([l, v]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    onClick: () => copy(l),
+    style: {
+      ...bvCardP,
+      borderRadius: 13,
+      padding: '9px 10px',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11.5,
+      fontWeight: 700,
+      color: '#8E8E93'
+    }
+  }, l), k === l ? bvCopied(11) : bvCopyIco('#0A84FF', 13)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4,
+      fontSize: 12.5,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums',
+      letterSpacing: -0.1
+    }
+  }, v)))));
+}
+// F · Price first: list price large next to the category line; facts as one line; identifiers as tight rows
+function BVPdF({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy();
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 13
+    }
+  }, bvCover(r, 52, 76), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'baseline'
+    }
+  }, bvCat(d, {
+    flex: 1
+  }), d.price && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      color: '#8E8E93'
+    }
+  }, "List ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      fontSize: 16,
+      color: BV.text
+    }
+  }, d.price))), bvTitle(d, 16.5, {
+    marginTop: 3
+  }), bvGray(bvJoin(d.pages && `${d.pages} pages`, d.weight, d.pub, d.year), {
+    marginTop: 4
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 14,
+      padding: '0 14px'
+    }
+  }, d.ids.map(([l, v], i) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    onClick: () => copy(l),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      height: 42,
+      borderTop: i ? bvHair : 'none',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 62,
+      fontSize: 13.5,
+      color: '#8E8E93'
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), k === l ? bvCopied() : bvCopyIco('#AEAEB2')))));
+}
+// G · Short + "More details": identifiers up front; publisher, weight, price on a sub-page
+function BVPdG({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy(),
+    [more, setMore] = React.useState(false);
+  const back = /*#__PURE__*/React.createElement("span", {
+    onClick: () => setMore(false),
+    style: {
+      width: 34,
+      height: 34,
+      borderRadius: '50%',
+      background: '#fff',
+      boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 4px 12px rgba(15,15,20,0.10)',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "14",
+    height: "14",
+    viewBox: "0 0 16 16",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M10 3L5 8l5 5",
+    stroke: "#3A3A3C",
+    strokeWidth: "2.2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  })));
+  if (more) return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "More details",
+    right: back
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      padding: '0 16px'
+    }
+  }, [['List price', d.price], ['Publisher', d.pub], ['Published', d.date], ['Pages', d.pages], ['Weight', d.weight], ['Format', d.cat]].filter(x => x[1]).map(([l, v], i) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    style: {
+      display: 'flex',
+      height: 44,
+      alignItems: 'center',
+      borderTop: i ? bvHair : 'none'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 14.5,
+      color: '#6C6C70'
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14.5,
+      fontWeight: 500
+    }
+  }, v)))));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, bvHead(r, d, [bvJoin(d.pages && `${d.pages} pages`, d.year)], 48, 70), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 12,
+      padding: '0 14px'
+    }
+  }, d.ids.map(([l, v], i) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    onClick: () => copy(l),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      height: 42,
+      borderTop: i ? bvHair : 'none',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 62,
+      fontSize: 13.5,
+      color: '#8E8E93'
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), k === l ? bvCopied() : bvCopyIco()))), /*#__PURE__*/React.createElement("div", {
+    onClick: () => setMore(true),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 5,
+      marginTop: 12,
+      fontSize: 14.5,
+      fontWeight: 600,
+      color: '#0A84FF',
+      cursor: 'pointer'
+    }
+  }, "Publisher, price and more", bvIcon.chev('#0A84FF')));
+}
+// H · Spec list: everything in one compact card, label left / value right, small type, no section titles
+function BVPdH({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy();
+  const rows = [['List price', d.price], ['Publisher', bvJoin(d.pub, d.date)], ['Pages · Weight', bvJoin(d.pages, d.weight)], ...d.ids.map(([l, v]) => [l, v, true])].filter(x => x[1]);
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 12,
+      alignItems: 'center'
+    }
+  }, bvCover(r, 40, 58, 6), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, bvCat(d), bvTitle(d, 15.5, {
+    marginTop: 3
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 12,
+      padding: '4px 14px'
+    }
+  }, rows.map(([l, v, c], i) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    onClick: c ? () => copy(l) : undefined,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      height: 36,
+      borderTop: i ? bvHair : 'none',
+      cursor: c ? 'pointer' : 'default'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 13.5,
+      color: '#8E8E93'
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: c ? 600 : 500,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), c && (k === l ? bvCopied(12) : bvCopyIco('#AEAEB2', 13))))));
+}
+// I · Tinted header: the book block sits on a soft tint; facts in it; identifiers as a slim list below
+function BVPdI({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy();
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderRadius: 18,
+      padding: 14,
+      background: d.book ? 'rgba(10,132,255,0.07)' : 'rgba(60,60,67,0.06)'
+    }
+  }, bvHead(r, d, [bvJoin(d.pages && `${d.pages} pages`, d.weight), bvJoin(d.pub, d.date)], 52, 76), d.price && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      marginTop: 10,
+      paddingTop: 10,
+      borderTop: '1px solid rgba(60,60,67,0.10)'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 14,
+      color: '#6C6C70'
+    }
+  }, "List price"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15.5,
+      fontWeight: 700
+    }
+  }, d.price))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '6px 4px 0'
+    }
+  }, d.ids.map(([l, v]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    onClick: () => copy(l),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      height: 38,
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 66,
+      fontSize: 13.5,
+      color: '#8E8E93'
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), k === l ? bvCopied() : bvCopyIco()))));
+}
+// J · Two tabs: "Book" (facts) and "Codes" (identifiers to copy) — never more than one short card tall
+function BVPdJ({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy(),
+    [tab, setTab] = React.useState('codes');
+  const line = (l, v, c, i) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    onClick: c ? () => copy(l) : undefined,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      height: 42,
+      borderTop: i ? bvHair : 'none',
+      cursor: c ? 'pointer' : 'default'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 14,
+      color: '#8E8E93'
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      fontWeight: c ? 600 : 500,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), c && (k === l ? bvCopied() : bvCopyIco()));
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, bvHead(r, d, [], 44, 64), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement(BVSeg, {
+    small: true,
+    items: [['codes', 'Codes'], ['book', 'Book']],
+    value: tab,
+    onChange: setTab
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 8,
+      padding: '0 14px'
+    }
+  }, tab === 'codes' ? d.ids.map(([l, v], i) => line(l, v, true, i)) : [['List price', d.price], ['Publisher', d.pub], ['Published', d.date], ['Pages · Weight', bvJoin(d.pages, d.weight)]].filter(x => x[1]).map(([l, v], i) => line(l, v, false, i))));
+}
+
+// ── Product details: three more close to H (spec list) and I (header card) — Pages · Weight stay merged (always fits);
+// Publisher and its date are separate rows (a publisher name can be long); cards are white ──
+const bvSpecRow = (l, v, i, copy, k) => /*#__PURE__*/React.createElement("div", {
+  key: l,
+  onClick: copy ? () => copy(l) : undefined,
+  style: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    height: 38,
+    borderTop: i ? bvHair : 'none',
+    cursor: copy ? 'pointer' : 'default'
+  }
+}, /*#__PURE__*/React.createElement("span", {
+  style: {
+    flexShrink: 0,
+    fontSize: 13.5,
+    color: '#8E8E93',
+    width: copy ? 64 : 'auto',
+    flex: copy ? 'none' : 1
+  }
+}, l), /*#__PURE__*/React.createElement("span", {
+  style: {
+    flex: copy ? 1 : 'none',
+    minWidth: 0,
+    fontSize: 14.5,
+    fontWeight: copy ? 600 : 500,
+    fontVariantNumeric: 'tabular-nums',
+    textAlign: copy ? 'left' : 'right',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: copy ? 'none' : '62%'
+  }
+}, v), copy && (k === l ? bvCopied(12) : bvCopyIco('#0A84FF', 14)));
+// K · H, with Publisher and Published as two rows; one white card for everything
+function BVPdK({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy();
+  const facts = [['List price', d.price], ['Pages · Weight', bvJoin(d.pages, d.weight)], ['Publisher', d.pub], ['Published', d.date]].filter(x => x[1]);
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 12,
+      alignItems: 'center'
+    }
+  }, bvCover(r, 40, 58, 6), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, bvCat(d), bvTitle(d, 15.5, {
+    marginTop: 3
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 12,
+      padding: '4px 14px'
+    }
+  }, facts.map(([l, v], i) => bvSpecRow(l, v, i)), d.ids.map(([l, v]) => bvSpecRow(l, v, 1, copy, k))));
+}
+// L · I in white: one card holds the book and its facts; the identifiers in a second white card
+function BVPdL({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy();
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      padding: '14px 14px 4px'
+    }
+  }, bvHead(r, d, [bvJoin(d.pages && `${d.pages} pages`, d.weight)], 48, 70), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10
+    }
+  }, [['List price', d.price], ['Publisher', d.pub], ['Published', d.date]].filter(x => x[1]).map(([l, v], i) => bvSpecRow(l, v, 1)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 10,
+      padding: '2px 14px'
+    }
+  }, d.ids.map(([l, v], i) => bvSpecRow(l, v, i, copy, k))));
+}
+// M · H in two quiet white cards (facts, then identifiers), no section titles; Pages · Weight under the title
+function BVPdM({
+  r
+}) {
+  const d = bvPd(r),
+    [k, copy] = useBvCopy();
+  // weights: the list price leads; identifiers are secondary (quiet type), each with a small "Copy"
+  return /*#__PURE__*/React.createElement(BVSheet, {
+    title: "Product details"
+  }, bvHead(r, d, [bvJoin(d.pages && `${d.pages} pages`, d.weight)], 68, 100), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 12,
+      padding: '2px 14px'
+    }
+  }, d.price && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      height: 52
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: 600,
+      color: BV.text
+    }
+  }, "List price"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: BV.fontDisplay,
+      fontSize: 22,
+      fontWeight: 700,
+      letterSpacing: -0.3,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, d.price)), [['Publisher', d.pub], ['Published', d.date]].filter(x => x[1]).map(([l, v], i) => bvSpecRow(l, v, d.price ? 1 : i))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCardP,
+      marginTop: 8,
+      padding: '2px 14px'
+    }
+  }, d.ids.map(([l, v], i) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    onClick: () => copy(l),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      height: 36,
+      borderTop: i ? bvHair : 'none',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 60,
+      fontSize: 12.5,
+      color: '#AEAEB2'
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 13.5,
+      fontWeight: 500,
+      color: '#6C6C70',
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, v), k === l ? bvCopied(12.5) : /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+      fontSize: 12.5,
+      fontWeight: 600,
+      color: '#0A84FF'
+    }
+  }, bvCopyIco('#0A84FF', 12), "Copy")))));
+}
+
+// ── Search D1–D3 (from feedback): number pad with 978 (white keys); a labelled History button; the search mode inside the
+// search bar; ISBN ↔ Title really switches the number pad ↔ a letter keyboard; a few recent searches with a way to see all ──
+const BV_RECENT = [['Atomic Habits', '9780735211292'], ['Dune', '9780441013593'], ['Sapiens', '9780062316097'], ['Educated', '9780399590504'], ['Deep Work', '9781455586691'], ['The Midnight Library', '9780525559474']];
+function BVKeyboard({
+  setV,
+  v,
+  noSearch
+}) {
+  const key = (c, w = 1, x) => /*#__PURE__*/React.createElement("div", {
+    key: c,
+    onClick: () => setV(c === '⌫' ? v.slice(0, -1) : c === 'space' ? v + ' ' : c === '⇧' || c === 'search' ? v : (v + c).slice(0, 40)),
+    style: {
+      flex: w,
+      height: 42,
+      borderRadius: 7,
+      background: c.length > 1 && c !== 'space' ? 'rgba(255,255,255,0.55)' : '#fff',
+      boxShadow: '0 1px 0 rgba(0,0,0,0.18)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: c.length > 1 ? 14 : 21,
+      fontWeight: c === 'search' ? 600 : 400,
+      cursor: 'pointer',
+      ...x
+    }
+  }, c === 'search' ? 'Search' : c === 'space' ? 'space' : c);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 9,
+      flex: 1,
+      justifyContent: 'flex-end'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 5
+    }
+  }, 'qwertyuiop'.split('').map(c => key(c))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 5,
+      padding: '0 16px'
+    }
+  }, 'asdfghjkl'.split('').map(c => key(c))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 5
+    }
+  }, key('⇧', 1.4), 'zxcvbnm'.split('').map(c => key(c)), key('⌫', 1.4)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 5
+    }
+  }, key('space', 5), !noSearch && key('search', 2, {
+    background: '#0A84FF',
+    color: '#fff'
+  })));
+}
+const bvModeIn = m => /*#__PURE__*/React.createElement("span", {
+  style: {
+    height: 32,
+    padding: '0 9px',
+    borderRadius: 9,
+    background: `${m[2]}1A`,
+    color: m[2],
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    fontSize: 13.5,
+    fontWeight: 800,
+    letterSpacing: 0.4,
+    flexShrink: 0
+  }
+}, m[0], /*#__PURE__*/React.createElement("svg", {
+  width: "9",
+  height: "6",
+  viewBox: "0 0 10 7",
+  fill: "none"
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M1 1.2l4 4 4-4",
+  stroke: m[2],
+  strokeWidth: "1.9",
+  strokeLinecap: "round",
+  strokeLinejoin: "round"
+})));
+const bvField = (v, t, m, x, leftMode) => /*#__PURE__*/React.createElement("div", {
+  style: {
+    height: 50,
+    borderRadius: 14,
+    background: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 9,
+    padding: '0 9px 0 14px',
+    ...x
+  }
+}, leftMode ? bvModeIn(m) : bvGlass(), /*#__PURE__*/React.createElement("span", {
+  style: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 17.5,
+    fontWeight: v ? 600 : 400,
+    letterSpacing: v && t === 'isbn' ? 1 : 0,
+    color: v ? BV.text : '#AEAEB2',
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden'
+  }
+}, v || (t === 'isbn' ? 'ISBN' : 'Title'), /*#__PURE__*/React.createElement("span", {
+  style: {
+    display: 'inline-block',
+    width: 2,
+    height: 20,
+    background: '#0A84FF',
+    verticalAlign: -3,
+    marginLeft: 1
+  }
+})), !leftMode && bvModeIn(m));
+const bvHistBtn = (onClick, x) => /*#__PURE__*/React.createElement("span", {
+  onClick: onClick,
+  style: {
+    height: 50,
+    padding: '0 16px',
+    borderRadius: 15,
+    background: '#fff',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 7,
+    fontSize: 15,
+    fontWeight: 600,
+    cursor: 'pointer',
+    flexShrink: 0,
+    ...x
+  }
+}, bvHistIco, "History");
+const bvChip = (txt, onClick, x) => /*#__PURE__*/React.createElement("span", {
+  key: txt,
+  onClick: onClick,
+  style: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 5,
+    padding: '7px 12px',
+    borderRadius: 999,
+    background: '#fff',
+    fontSize: 13,
+    fontWeight: 500,
+    color: '#3A3A3C',
+    flexShrink: 0,
+    cursor: 'pointer',
+    ...x
+  }
+}, txt);
+// the history page (all recent searches), inside the same sheet
+const bvPickRecent = (L, t, n) => L && L.onSubmit && L.onSubmit({
+  title: t,
+  cover: `https://covers.openlibrary.org/b/isbn/${n}-M.jpg`
+});
+function BVHistPage({
+  onBack
+}) {
+  const L = React.useContext(BV_LIVE);
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      margin: '-10px -16px -4px'
+    }
+  }, /*#__PURE__*/React.createElement(BzSheetHead, {
+    title: "History",
+    onBack: onBack,
+    onClose: L ? L.onClose : () => {}
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...bvCard,
+      padding: '0 14px',
+      overflow: 'hidden'
+    }
+  }, BV_RECENT.map(([t, n], i) => /*#__PURE__*/React.createElement("div", {
+    key: n,
+    onClick: () => bvPickRecent(L, t, n),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      height: 50,
+      borderTop: i ? bvHair : 'none',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 600
+    }
+  }, t), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: '#AEAEB2',
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, n)), bvIcon.chev()))));
+}
+// D1: field (mode inside) · ISBN / Title switch · recent chips ending in "All" · number pad or keyboard · History + Search
+function BVSearchD1() {
+  const [v, setV] = React.useState(''),
+    [t, setT] = React.useState('isbn'),
+    [hist, setHist] = React.useState(false),
+    m = BV_SM.cl;
+  if (hist) return /*#__PURE__*/React.createElement(BVSearchShell, null, /*#__PURE__*/React.createElement(BVHistPage, {
+    onBack: () => setHist(false)
+  }));
+  return /*#__PURE__*/React.createElement(BVSearchShell, null, bvField(v, t, m), /*#__PURE__*/React.createElement(BVSeg, {
+    small: true,
+    items: [['isbn', 'ISBN'], ['title', 'Title']],
+    value: t,
+    onChange: k => {
+      setT(k);
+      setV('');
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 7,
+      overflow: 'hidden'
+    }
+  }, BV_RECENT.slice(0, 3).map(([x]) => bvChip(x)), bvChip('All ›', () => setHist(true), {
+    color: '#0A84FF',
+    fontWeight: 600
+  })), t === 'isbn' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(BVPad, {
+    v: v,
+    setV: setV
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, bvHistBtn(() => setHist(true)), bvSearchBtn(v))) : /*#__PURE__*/React.createElement(BVKeyboard, {
+    v: v,
+    setV: setV
+  }));
+}
+// D2: field (mode inside) · ISBN / Title as text tabs with History on the same line · two recent searches as rows · pad · Search
+function BVSearchD2() {
+  const [v, setV] = React.useState(''),
+    [t, setT] = React.useState('isbn'),
+    [hist, setHist] = React.useState(false),
+    m = BV_SM.cl;
+  if (hist) return /*#__PURE__*/React.createElement(BVSearchShell, null, /*#__PURE__*/React.createElement(BVHistPage, {
+    onBack: () => setHist(false)
+  }));
+  return /*#__PURE__*/React.createElement(BVSearchShell, null, bvField(v, t, m), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 20,
+      padding: '0 4px'
+    }
+  }, [['isbn', 'ISBN'], ['title', 'Title']].map(([k, l]) => /*#__PURE__*/React.createElement("span", {
+    key: k,
+    onClick: () => {
+      setT(k);
+      setV('');
+    },
+    style: {
+      fontSize: 15,
+      fontWeight: 600,
+      cursor: 'pointer',
+      color: t === k ? BV.text : '#AEAEB2',
+      paddingBottom: 3,
+      borderBottom: t === k ? `2px solid ${BV.text}` : '2px solid transparent'
+    }
+  }, l)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    onClick: () => setHist(true),
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '6px 12px',
+      borderRadius: 999,
+      background: '#fff',
+      fontSize: 13.5,
+      fontWeight: 600,
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "15",
+    height: "15",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#3A3A3C",
+    strokeWidth: "2.2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M3 12a9 9 0 1 0 3-6.7L3 8"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M3 3v5h5"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 7v5l3 2"
+  })), "History")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 7
+    }
+  }, BV_RECENT.slice(0, 2).map(([x, n]) => /*#__PURE__*/React.createElement("div", {
+    key: n,
+    style: {
+      flex: 1,
+      minWidth: 0,
+      padding: '7px 11px',
+      borderRadius: 12,
+      background: '#fff'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, x), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: '#AEAEB2',
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, n)))), t === 'isbn' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(BVPad, {
+    v: v,
+    setV: setV
+  }), bvSearchBtn(v, {
+    flex: 'none'
+  })) : /*#__PURE__*/React.createElement(BVKeyboard, {
+    v: v,
+    setV: setV
+  }));
+}
+// D3: mode at the front of the field · recent chips with History at the end of the row · pad (Title = ABC key) · Search
+function BVSearchD3() {
+  const [v, setV] = React.useState(''),
+    [t, setT] = React.useState('isbn'),
+    [hist, setHist] = React.useState(false),
+    m = BV_SM.cl;
+  if (hist) return /*#__PURE__*/React.createElement(BVSearchShell, null, /*#__PURE__*/React.createElement(BVHistPage, {
+    onBack: () => setHist(false)
+  }));
+  return /*#__PURE__*/React.createElement(BVSearchShell, null, bvField(v, t, m, null, true), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 7
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      display: 'flex',
+      gap: 7,
+      overflow: 'hidden'
+    }
+  }, BV_RECENT.slice(0, 3).map(([x]) => bvChip(x))), /*#__PURE__*/React.createElement("span", {
+    onClick: () => setHist(true),
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '7px 12px',
+      borderRadius: 999,
+      background: '#1C1C1E',
+      color: '#fff',
+      fontSize: 13,
+      fontWeight: 600,
+      cursor: 'pointer',
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "14",
+    height: "14",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#fff",
+    strokeWidth: "2.2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M3 12a9 9 0 1 0 3-6.7L3 8"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M3 3v5h5"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 7v5l3 2"
+  })), "History")), t === 'isbn' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(BVPad, {
+    v: v,
+    setV: setV,
+    keys: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '978', '0', '⌫']
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    onClick: () => {
+      setT('title');
+      setV('');
+    },
+    style: {
+      height: 50,
+      padding: '0 16px',
+      borderRadius: 15,
+      background: '#fff',
+      display: 'inline-flex',
+      alignItems: 'center',
+      fontSize: 15,
+      fontWeight: 700,
+      color: '#0A84FF',
+      cursor: 'pointer'
+    }
+  }, "ABC"), bvSearchBtn(v))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    onClick: () => {
+      setT('isbn');
+      setV('');
+    },
+    style: {
+      padding: '6px 12px',
+      borderRadius: 999,
+      background: '#fff',
+      fontSize: 13,
+      fontWeight: 700,
+      color: '#0A84FF',
+      cursor: 'pointer'
+    }
+  }, "123 \xB7 ISBN")), /*#__PURE__*/React.createElement(BVKeyboard, {
+    v: v,
+    setV: setV
+  })));
+}
+const BV_KBH = 292; // keyboard height — the number pad zone in F uses the same, so switching ISBN ↔ Title never moves the sheet
+// the phone's own keyboard (iOS), drawn as it looks — the app doesn't make its own; its blue key is the search
+function BVIosKeyboard({
+  v,
+  setV,
+  on123,
+  onSearch
+}) {
+  const k = (c, {
+    ic,
+    ...x
+  } = {}) => /*#__PURE__*/React.createElement("div", {
+    key: c,
+    onClick: () => c === '123' && on123 ? on123() : setV(c === '⌫' ? v.slice(0, -1) : c === 'space' ? v + ' ' : c.length === 1 ? (v + c.toLowerCase()).slice(0, 40) : v),
+    style: {
+      height: 42,
+      borderRadius: 7,
+      background: '#fff',
+      boxShadow: '0 1px 0 rgba(0,0,0,0.28)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 22,
+      fontWeight: 400,
+      color: '#000',
+      cursor: 'pointer',
+      flex: 1,
+      ...x
+    }
+  }, ic || (c === 'space' ? '' : c));
+  const ico = (d, sw = 1.9) => /*#__PURE__*/React.createElement("svg", {
+    width: "22",
+    height: "22",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#000",
+    strokeWidth: sw,
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, d);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#D3D5DB',
+      borderTopLeftRadius: 26,
+      borderTopRightRadius: 26,
+      padding: '0 4px 6px',
+      flexShrink: 0,
+      height: BV_KBH,
+      boxSizing: 'border-box'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 44
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 11,
+      padding: '0 2px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6
+    }
+  }, 'QWERTYUIOP'.split('').map(c => k(c))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6,
+      padding: '0 19px'
+    }
+  }, 'ASDFGHJKL'.split('').map(c => k(c))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6
+    }
+  }, k('⇧', {
+    flex: 1.35,
+    background: '#ABB0BA',
+    ic: ico(/*#__PURE__*/React.createElement("path", {
+      d: "M12 4L4 12.5h4.5V20h7v-7.5H20z"
+    }), 1.6)
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 8
+    }
+  }), 'ZXCVBNM'.split('').map(c => k(c)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 8
+    }
+  }), k('⌫', {
+    flex: 1.35,
+    background: '#ABB0BA',
+    ic: ico(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("path", {
+      d: "M8.5 5H20a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 19H8.5L2.5 12z"
+    }), /*#__PURE__*/React.createElement("path", {
+      d: "M11.5 9.5l5 5M16.5 9.5l-5 5"
+    })), 1.6)
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6
+    }
+  }, k('123', {
+    flex: 1.1,
+    fontSize: 17,
+    background: '#ABB0BA'
+  }), k('☺', {
+    flex: 1.1,
+    background: '#ABB0BA',
+    ic: ico(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+      cx: "12",
+      cy: "12",
+      r: "9"
+    }), /*#__PURE__*/React.createElement("path", {
+      d: "M8.5 14.5a4.5 4.5 0 0 0 7 0"
+    }), /*#__PURE__*/React.createElement("circle", {
+      cx: "9",
+      cy: "10",
+      r: ".6",
+      fill: "#000"
+    }), /*#__PURE__*/React.createElement("circle", {
+      cx: "15",
+      cy: "10",
+      r: ".6",
+      fill: "#000"
+    })), 1.6)
+  }), k('space', {
+    flex: 4.8
+  }), /*#__PURE__*/React.createElement("div", {
+    onClick: onSearch,
+    style: {
+      flex: 2.4,
+      height: 42,
+      borderRadius: 7,
+      background: '#3478F6',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: '0 1px 0 rgba(0,0,0,0.28)',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "22",
+    height: "22",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#fff",
+    strokeWidth: "2.4",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "10.5",
+    cy: "10.5",
+    r: "6.5"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M15.5 15.5L20 20"
+  }))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      padding: '14px 26px 4px'
+    }
+  }, ico(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "9.5"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M2.5 12h19M12 2.5c2.8 3 2.8 16 0 19M12 2.5c-2.8 3-2.8 16 0 19"
+  })), 1.6), ico(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+    x: "9",
+    y: "3",
+    width: "6",
+    height: "11",
+    rx: "3"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"
+  })), 1.7)));
+}
+// ── Search E1 / E2 (from feedback): History and Search share the bottom row like the key grid — History one column,
+// Search two; no recent row with the number pad (only with the keyboard); the search mode inside the bar is a real
+// picker that says "Cloud", "Live" or "Local DB" ──
+const BV_MODES = [['lv', 'Live', '#1B9E51', 'Live from Amazon — freshest, slowest'], ['cl', 'Cloud', '#0A84FF', 'Our cloud — fast, refreshed hourly'], ['db', 'Local DB', '#7E2FB8', 'On this phone — instant, offline']];
+function BVModePick({
+  md,
+  setMd,
+  open,
+  setOpen,
+  big,
+  pos
+}) {
+  const m = BV_MODES.find(x => x[0] === md);
+  return /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'relative',
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    onClick: () => setOpen(!open),
+    style: big ? {
+      height: big,
+      padding: '0 12px 0 14px',
+      borderRadius: 14,
+      background: '#fff',
+      color: m[2],
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      fontSize: 15,
+      fontWeight: 700,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap'
+    } : {
+      height: 34,
+      padding: '0 10px 0 11px',
+      borderRadius: 10,
+      background: `${m[2]}1A`,
+      color: m[2],
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 5,
+      fontSize: 14,
+      fontWeight: 700,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap'
+    }
+  }, m[1], /*#__PURE__*/React.createElement("svg", {
+    width: "9",
+    height: "6",
+    viewBox: "0 0 10 7",
+    fill: "none",
+    style: {
+      transform: open ? 'rotate(180deg)' : 'none'
+    }
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M1 1.2l4 4 4-4",
+    stroke: m[2],
+    strokeWidth: "1.9",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }))), open && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      right: big ? 0 : -9,
+      top: big ? big + 8 : 44,
+      zIndex: 5,
+      ...pos,
+      width: 252,
+      background: '#fff',
+      borderRadius: 16,
+      padding: 6,
+      boxShadow: '0 10px 30px rgba(15,15,20,0.22), 0 0 0 0.5px rgba(60,60,67,0.12)'
+    }
+  }, BV_MODES.map(([k, l, c, h]) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    onClick: () => {
+      setMd(k);
+      setOpen(false);
+    },
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '9px 10px',
+      borderRadius: 11,
+      cursor: 'pointer',
+      background: k === md ? `${c}14` : 'transparent'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 9,
+      height: 9,
+      borderRadius: '50%',
+      background: c,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14.5,
+      fontWeight: 600,
+      color: BV.text
+    }
+  }, l), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: '#8E8E93',
+      marginTop: 1
+    }
+  }, h)), k === md && /*#__PURE__*/React.createElement("svg", {
+    width: "15",
+    height: "15",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: c,
+    strokeWidth: "3",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M5 12.5l4.5 4.5L19 7"
+  }))))));
+}
+function bvSearchE(look) {
+  return function BVSearchE() {
+    const L = React.useContext(BV_LIVE);
+    const [v, setV] = React.useState(''),
+      [t, setT] = React.useState('isbn'),
+      [md0, setMd0] = React.useState('cl'),
+      [open, setOpen] = React.useState(false),
+      [hist, setHist] = React.useState(false);
+    const md = L && L.searchMode ? L.searchMode : md0,
+      setMd = L && L.onChangeMode ? L.onChangeMode : setMd0;
+    const go = () => L && L.onSubmit && L.onSubmit();
+    if (hist) return /*#__PURE__*/React.createElement(BVSearchShell, null, /*#__PURE__*/React.createElement(BVHistPage, {
+      onBack: () => setHist(false)
+    }));
+    const sw = k => {
+      setT(k);
+      setV('');
+    };
+    return /*#__PURE__*/React.createElement(BVSearchShell, {
+      h: t === 'title' && look !== 1 ? 520 : 470,
+      kb: t === 'title' ? /*#__PURE__*/React.createElement(BVIosKeyboard, {
+        v: v,
+        setV: setV,
+        onSearch: go
+      }) : null
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: 50,
+        borderRadius: 14,
+        background: '#fff',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 9,
+        padding: '0 8px 0 14px',
+        position: 'relative',
+        zIndex: 3
+      }
+    }, bvGlass(), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        minWidth: 0,
+        fontSize: 17.5,
+        fontWeight: v ? 600 : 400,
+        letterSpacing: v && t === 'isbn' ? 1 : 0,
+        color: v ? BV.text : '#AEAEB2',
+        fontVariantNumeric: 'tabular-nums',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden'
+      }
+    }, v || (t === 'isbn' ? 'ISBN' : 'Title'), /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'inline-block',
+        width: 2,
+        height: 20,
+        background: '#0A84FF',
+        verticalAlign: -3,
+        marginLeft: 1
+      }
+    })), /*#__PURE__*/React.createElement(BVModePick, {
+      md: md,
+      setMd: setMd,
+      open: open,
+      setOpen: setOpen
+    })), look === 2 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 20,
+        padding: '0 4px'
+      }
+    }, [['isbn', 'ISBN'], ['title', 'Title']].map(([k, l]) => /*#__PURE__*/React.createElement("span", {
+      key: k,
+      onClick: () => sw(k),
+      style: {
+        fontSize: 15,
+        fontWeight: 600,
+        cursor: 'pointer',
+        color: t === k ? BV.text : '#AEAEB2',
+        paddingBottom: 3,
+        borderBottom: t === k ? `2px solid ${BV.text}` : '2px solid transparent'
+      }
+    }, l))) : /*#__PURE__*/React.createElement(BVSeg, {
+      small: true,
+      items: [['isbn', 'ISBN'], ['title', 'Title']],
+      value: t,
+      onChange: sw
+    }), t === 'title' && look !== 1 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 7,
+        overflow: 'hidden'
+      }
+    }, BV_RECENT.slice(0, 4).map(([x]) => bvChip(x))), t === 'title' && look === 1 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        alignItems: 'stretch',
+        gap: 7
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        alignItems: 'stretch',
+        gap: 7,
+        overflow: 'hidden',
+        WebkitMaskImage: 'linear-gradient(90deg,#000 85%,transparent)'
+      }
+    }, BV_RECENT.slice(0, 4).map(([x, n]) => bvChip(x, () => bvPickRecent(L, x, n), {
+      paddingTop: 0,
+      paddingBottom: 0
+    }))), /*#__PURE__*/React.createElement("span", {
+      onClick: () => setHist(true),
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        padding: '0 12px 0 10px',
+        borderRadius: 999,
+        background: '#fff',
+        fontSize: 13,
+        fontWeight: 600,
+        color: '#0A84FF',
+        cursor: 'pointer',
+        flexShrink: 0
+      }
+    }, /*#__PURE__*/React.createElement("svg", {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "#0A84FF",
+      strokeWidth: "2.3",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M3 12a9 9 0 1 0 3-6.7L3 8"
+    }), /*#__PURE__*/React.createElement("path", {
+      d: "M3 3v5h5"
+    }), /*#__PURE__*/React.createElement("path", {
+      d: "M12 7v5l3 2"
+    })), "History")), t === 'isbn' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(BVPad, {
+      v: v,
+      setV: setV
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3,1fr)',
+        gap: 7
+      }
+    }, bvHistBtn(() => setHist(true), {
+      justifyContent: 'center',
+      padding: 0
+    }), /*#__PURE__*/React.createElement("div", {
+      onClick: go,
+      style: {
+        gridColumn: 'span 2',
+        display: 'flex',
+        cursor: 'pointer'
+      }
+    }, bvSearchBtn(v)))));
+  };
+}
+const BVSearchE1 = bvSearchE(1),
+  BVSearchE2 = bvSearchE(2);
+
+// ── Search F1–F4 (from feedback): one sheet height for ISBN and Title — the number pad sits in a keyboard-coloured zone
+// exactly as tall as the phone's keyboard, so switching only swaps the keys; the recent row (both modes) ends in History,
+// which opens the same history page; the number pad keeps 978 and a full-width Search (History moved to the recent row) ──
+function BVPadZone({
+  v,
+  setV,
+  onAbc
+}) {
+  const key = (c, x) => /*#__PURE__*/React.createElement("div", {
+    key: c,
+    onClick: () => setV(c === '⌫' ? v.slice(0, -1) : (v + c).slice(0, 13)),
+    style: {
+      borderRadius: 8,
+      background: '#fff',
+      boxShadow: '0 1px 0 rgba(0,0,0,0.28)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: c === '978' ? 19 : 25,
+      fontWeight: c === '978' ? 500 : 400,
+      color: '#000',
+      cursor: 'pointer',
+      ...x
+    }
+  }, c === '⌫' ? /*#__PURE__*/React.createElement("svg", {
+    width: "24",
+    height: "18",
+    viewBox: "0 0 24 18",
+    fill: "none",
+    stroke: "#000",
+    strokeWidth: "1.6",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M8 1h13a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8L1 9l7-8z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M11 6l6 6M17 6l-6 6",
+    strokeLinecap: "round"
+  })) : c);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#D3D5DB',
+      borderTopLeftRadius: 26,
+      borderTopRightRadius: 26,
+      padding: '10px 6px 24px',
+      height: BV_KBH,
+      boxSizing: 'border-box',
+      flexShrink: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 7
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3,1fr)',
+      gridAutoRows: '1fr',
+      gap: 7
+    }
+  }, ['1', '2', '3', '4', '5', '6', '7', '8', '9', '978', '0', '⌫'].map(c => key(c, c === '⌫' ? {
+    background: '#ABB0BA'
+  } : null))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 7,
+      height: 46
+    }
+  }, onAbc && /*#__PURE__*/React.createElement("div", {
+    onClick: onAbc,
+    style: {
+      flex: 1,
+      borderRadius: 8,
+      background: '#ABB0BA',
+      boxShadow: '0 1px 0 rgba(0,0,0,0.28)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 17,
+      color: '#000',
+      cursor: 'pointer'
+    }
+  }, "ABC"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 2,
+      borderRadius: 8,
+      background: '#3478F6',
+      boxShadow: '0 1px 0 rgba(0,0,0,0.28)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      color: '#fff',
+      fontSize: 17,
+      fontWeight: 600,
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "17",
+    height: "17",
+    viewBox: "0 0 18 18",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "8",
+    cy: "8",
+    r: "5.5",
+    stroke: "#fff",
+    strokeWidth: "2.2"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12.5 12.5L16 16",
+    stroke: "#fff",
+    strokeWidth: "2.2",
+    strokeLinecap: "round"
+  })), "Search")));
+}
+// recent searches + History at the end of the same row (History stays put, chips clip)
+const bvRecentRow = onHist => /*#__PURE__*/React.createElement("div", {
+  style: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 7
+  }
+}, /*#__PURE__*/React.createElement("div", {
+  style: {
+    flex: 1,
+    minWidth: 0,
+    display: 'flex',
+    gap: 7,
+    overflow: 'hidden',
+    WebkitMaskImage: 'linear-gradient(90deg,#000 85%,transparent)'
+  }
+}, BV_RECENT.slice(0, 4).map(([x]) => bvChip(x))), /*#__PURE__*/React.createElement("span", {
+  onClick: onHist,
+  style: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 5,
+    padding: '7px 11px 7px 9px',
+    borderRadius: 999,
+    background: '#fff',
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#0A84FF',
+    cursor: 'pointer',
+    flexShrink: 0
+  }
+}, /*#__PURE__*/React.createElement("svg", {
+  width: "14",
+  height: "14",
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "#0A84FF",
+  strokeWidth: "2.3",
+  strokeLinecap: "round",
+  strokeLinejoin: "round"
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M3 12a9 9 0 1 0 3-6.7L3 8"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M3 3v5h5"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M12 7v5l3 2"
+})), "History"));
+const bvTxt = (v, t) => /*#__PURE__*/React.createElement("span", {
+  style: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 17.5,
+    fontWeight: v ? 600 : 400,
+    letterSpacing: v && t === 'isbn' ? 1 : 0,
+    color: v ? BV.text : '#AEAEB2',
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden'
+  }
+}, v || (t === 'isbn' ? 'ISBN' : 'Title'), /*#__PURE__*/React.createElement("span", {
+  style: {
+    display: 'inline-block',
+    width: 2,
+    height: 20,
+    background: '#0A84FF',
+    verticalAlign: -3,
+    marginLeft: 1
+  }
+}));
+const bvBar = (kids, x) => /*#__PURE__*/React.createElement("div", {
+  style: {
+    flex: 1,
+    minWidth: 0,
+    height: 50,
+    borderRadius: 14,
+    background: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 9,
+    padding: '0 7px 0 14px',
+    ...x
+  }
+}, kids);
+// small ISBN | Title switch that fits inside the bar
+const bvInSeg = (t, sw) => /*#__PURE__*/React.createElement("span", {
+  style: {
+    display: 'inline-flex',
+    padding: 2,
+    borderRadius: 10,
+    background: 'rgba(118,118,128,0.12)',
+    flexShrink: 0
+  }
+}, [['isbn', 'ISBN'], ['title', 'Title']].map(([k, l]) => /*#__PURE__*/React.createElement("span", {
+  key: k,
+  onClick: () => sw(k),
+  style: {
+    padding: '6px 10px',
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    background: t === k ? '#fff' : 'transparent',
+    color: t === k ? BV.text : '#8E8E93',
+    boxShadow: t === k ? '0 1px 3px rgba(0,0,0,0.12)' : 'none'
+  }
+}, l)));
+function bvSearchF(kind) {
+  return function BVSearchF() {
+    const [v, setV] = React.useState(''),
+      [t, setT] = React.useState('isbn'),
+      [md, setMd] = React.useState('cl'),
+      [open, setOpen] = React.useState(false),
+      [hist, setHist] = React.useState(false);
+    const sw = k => {
+      setT(k);
+      setV('');
+    };
+    if (hist) return /*#__PURE__*/React.createElement(BVSearchShell, {
+      h: "auto",
+      kb: /*#__PURE__*/React.createElement("div", {
+        style: {
+          height: BV_KBH - 40
+        }
+      })
+    }, /*#__PURE__*/React.createElement(BVHistPage, {
+      onBack: () => setHist(false)
+    }));
+    const kb = t === 'isbn' ? /*#__PURE__*/React.createElement(BVPadZone, {
+      v: v,
+      setV: setV,
+      onAbc: kind === 3 ? () => sw('title') : null
+    }) : /*#__PURE__*/React.createElement(BVIosKeyboard, {
+      v: v,
+      setV: setV,
+      on123: kind === 3 ? () => sw('isbn') : null
+    });
+    const pick = big => /*#__PURE__*/React.createElement(BVModePick, {
+      md: md,
+      setMd: setMd,
+      open: open,
+      setOpen: setOpen,
+      big: big
+    });
+    let head;
+    if (kind === 1)
+      // ISBN | Title inside the bar; Cloud outside, beside it
+      head = /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          gap: 8,
+          position: 'relative',
+          zIndex: 3
+        }
+      }, bvBar(/*#__PURE__*/React.createElement(React.Fragment, null, bvGlass(), bvTxt(v, t), bvInSeg(t, sw))), pick(50));else if (kind === 2)
+      // the kind is a tap-to-flip label at the front of the bar; Cloud outside
+      head = /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          gap: 8,
+          position: 'relative',
+          zIndex: 3
+        }
+      }, bvBar(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+        onClick: () => sw(t === 'isbn' ? 'title' : 'isbn'),
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          height: 34,
+          padding: '0 10px',
+          marginLeft: -7,
+          borderRadius: 10,
+          background: 'rgba(118,118,128,0.12)',
+          fontSize: 13.5,
+          fontWeight: 700,
+          color: '#3A3A3C',
+          cursor: 'pointer',
+          flexShrink: 0
+        }
+      }, t === 'isbn' ? 'ISBN' : 'Title', /*#__PURE__*/React.createElement("svg", {
+        width: "13",
+        height: "13",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "#8E8E93",
+        strokeWidth: "2.4",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"
+      }))), bvTxt(v, t)), {
+        paddingLeft: 14
+      }), pick(50));else if (kind === 3)
+      // no switch at all: ABC on the number pad, 123 on the keyboard — like the phone does it; Cloud stays in the bar
+      head = /*#__PURE__*/React.createElement("div", {
+        style: {
+          position: 'relative',
+          zIndex: 3,
+          display: 'flex'
+        }
+      }, bvBar(/*#__PURE__*/React.createElement(React.Fragment, null, bvGlass(), bvTxt(v, t), pick())));else
+      // ISBN / Title switch on its own line with Cloud on the right of that line; the bar is just the text
+      head = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          position: 'relative',
+          zIndex: 3
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          flex: 1
+        }
+      }, /*#__PURE__*/React.createElement(BVSeg, {
+        small: true,
+        items: [['isbn', 'ISBN'], ['title', 'Title']],
+        value: t,
+        onChange: sw
+      })), pick(36)), /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex'
+        }
+      }, bvBar(/*#__PURE__*/React.createElement(React.Fragment, null, bvGlass(), bvTxt(v, t)))));
+    return /*#__PURE__*/React.createElement(BVSearchShell, {
+      h: "auto",
+      kb: kb
+    }, head, bvRecentRow(() => setHist(true)));
+  };
+}
+const BVSearchF1 = bvSearchF(1),
+  BVSearchF2 = bvSearchF(2),
+  BVSearchF3 = bvSearchF(3),
+  BVSearchF4 = bvSearchF(4);
+
+// rows → versions
+window.BSV_VARIANTS = {
+  triggers: [{
+    n: 'A',
+    name: 'Labelled list',
+    note: 'No result line under the title; “Checked top to bottom” + How it works',
+    render: r => /*#__PURE__*/React.createElement(BVTriggersP, {
+      r: r
+    })
+  }],
+  checks: [{
+    n: 'A',
+    name: 'Same rows, no summary',
+    note: 'No counts card or “n flags raised” line; checks in the fixed order, Restricted ASIN first',
+    render: r => /*#__PURE__*/React.createElement(BVChecksRows, {
+      r: r,
+      kind: "now"
+    })
+  }, {
+    n: 'B',
+    name: 'Names and values from the flags doc',
+    note: 'Like A; Multi-Item, Clear / Gated / Listed / High / Normal…; scan-screen order',
+    render: r => /*#__PURE__*/React.createElement(BVChecksDoc, {
+      r: r
+    })
+  }],
+  product: [{
+    n: 'G',
+    name: 'Two quiet cards',
+    note: 'Bigger cover; Pages · Weight under the title; facts card, then identifiers card',
+    render: r => /*#__PURE__*/React.createElement(BVPdM, {
+      r: r
+    })
+  }],
+  sold: [{
+    n: 'A',
+    name: 'Grid + scale',
+    note: 'The 180-day grid, the scale word, the six-step scale, and How Sold Days works',
+    render: r => /*#__PURE__*/React.createElement(BVSoldB2, {
+      r: r
+    })
+  }],
+  alloffers: [{
+    n: 'A',
+    name: 'Lighter table',
+    note: 'Same table, plain decimals, soft striped rows; no line under the title',
+    render: r => /*#__PURE__*/React.createElement(BVAllOffersB, {
+      r: r
+    })
+  }, {
+    n: 'B',
+    name: 'Column names',
+    note: 'Each column: MU / FBM used / 16 offers',
+    render: r => /*#__PURE__*/React.createElement(BVOffersT, {
+      r: r,
+      o: {
+        head: 'stack'
+      }
+    })
+  }, {
+    n: 'E',
+    name: 'Row numbers',
+    note: 'B with a quiet 1, 2, 3… in front of each row',
+    render: r => /*#__PURE__*/React.createElement(BVOffersT, {
+      r: r,
+      o: {
+        head: 'stack',
+        rank: true
+      }
+    })
+  }, {
+    n: 'F',
+    name: 'Row numbers, light cents',
+    note: 'E with the cents smaller and lighter, as on the page’s table',
+    render: r => /*#__PURE__*/React.createElement(BVOffersT, {
+      r: r,
+      o: {
+        head: 'stack',
+        rank: true,
+        lightCents: true
+      }
+    })
+  }],
+  offset: [{
+    n: 'A',
+    name: 'Grouped list',
+    note: 'iOS-style groups: Table and Footer',
+    render: () => /*#__PURE__*/React.createElement(BVOffSetB, null)
+  }],
+  sales: [{
+    n: 'B',
+    name: 'Grid + latest per column',
+    note: 'Sold Days grid in column colours; typical sale price for used and new; sales spotted per column, tap for that column',
+    render: r => /*#__PURE__*/React.createElement(BVSalesB2, {
+      r: r
+    })
+  }, {
+    n: 'C1',
+    name: 'Typical price · rows',
+    note: 'As B; typical sale price as one card with a row for Used and New, price on the right',
+    render: r => /*#__PURE__*/React.createElement(BVSalesB2, {
+      r: r,
+      tp: "rows"
+    })
+  }, {
+    n: 'C2',
+    name: 'Typical price · low / high',
+    note: 'As B; the low and high shown as two labelled numbers per condition',
+    render: r => /*#__PURE__*/React.createElement(BVSalesB2, {
+      r: r,
+      tp: "fromto"
+    })
+  }, {
+    n: 'C3',
+    name: 'Typical price · range bars',
+    note: 'As B; each range drawn as a bar on one shared price scale, so used vs new compares at a glance',
+    render: r => /*#__PURE__*/React.createElement(BVSalesB2, {
+      r: r,
+      tp: "bars"
+    })
+  }, {
+    n: 'C4',
+    name: 'Typical price · sentence',
+    note: 'As B; one plain sentence: used copies usually sell for $x–$y; new for $x–$y',
+    render: r => /*#__PURE__*/React.createElement(BVSalesB2, {
+      r: r,
+      tp: "sentence"
+    })
+  }],
+  chart: [{
+    n: 'A',
+    name: 'Checkmark lists',
+    note: 'Plain lists with checkmarks, no switches',
+    render: () => /*#__PURE__*/React.createElement(BVChartB, null)
+  }],
+  stock: [{
+    n: 'A',
+    name: 'Newer card style',
+    note: 'The current list; channel and condition as coloured words, stock first, Min / Max under the price',
+    render: r => /*#__PURE__*/React.createElement(BVYoursList, {
+      r: r,
+      kind: "stock"
+    })
+  }],
+  pastsales: [{
+    n: 'A',
+    name: 'Newer card style',
+    note: 'The current list; channel and condition as coloured words, sold date first, Min / Max under the price',
+    render: r => /*#__PURE__*/React.createElement(BVYoursList, {
+      r: r,
+      kind: "sales"
+    })
+  }],
+  search: [{
+    n: 'E1',
+    name: 'History 1 · Search 2',
+    note: 'History one key column, Search two; tap the mode in the bar to pick Cloud / Live / Local DB; ISBN / Title switch; Title: recent row ends in History, same sheet height as ISBN',
+    render: () => /*#__PURE__*/React.createElement(BVSearchE1, null)
+  }, {
+    n: 'E2',
+    name: 'E1 with text tabs',
+    note: 'Same, with ISBN / Title as text tabs; recent searches only with the keyboard',
+    render: () => /*#__PURE__*/React.createElement(BVSearchE2, null)
+  }, {
+    n: 'F1',
+    name: 'Switch in the bar, Cloud outside',
+    note: 'Same height for ISBN and Title (pad zone = keyboard height); ISBN | Title inside the bar; Cloud beside it; recent row ends in History',
+    render: () => /*#__PURE__*/React.createElement(BVSearchF1, null)
+  }, {
+    n: 'F2',
+    name: 'Tap-to-flip label',
+    note: 'As F1; the bar starts with ISBN ⇄ / Title ⇄ — tap to flip; Cloud beside the bar',
+    render: () => /*#__PURE__*/React.createElement(BVSearchF2, null)
+  }, {
+    n: 'F3',
+    name: 'No switch — ABC / 123 keys',
+    note: 'As F1; ABC on the number pad opens the letters, 123 on the keyboard goes back to ISBN; Cloud stays in the bar',
+    render: () => /*#__PURE__*/React.createElement(BVSearchF3, null)
+  }, {
+    n: 'F4',
+    name: 'Switch line with Cloud',
+    note: 'As F1; ISBN / Title switch on its own line with Cloud at its right; the bar holds only the text',
+    render: () => /*#__PURE__*/React.createElement(BVSearchF4, null)
+  }]
+};
+
+// ── Main app: the final version of each sheet (as set on Bottom Sheet Versions › New), live — opens / closes with a slide,
+// backdrop and X close it, and it is wired to the app (chart state, offer pick, search). Sheets that stay as they are (ASR,
+// Profit) keep their current component. Keep in step with BSV_FINAL in bottom-sheet-versions.jsx.
+const BZ_FINAL = {
+  triggers: 'A',
+  checks: 'B',
+  product: 'G',
+  sold: 'A',
+  alloffers: 'F',
+  offset: 'A',
+  sales: 'C1',
+  chart: 'A',
+  stock: 'A',
+  pastsales: 'A',
+  search: 'E1'
+};
+function BzFinalSheet({
+  id,
+  open,
+  onClose,
+  r,
+  ...ctx
+}) {
+  const [mounted, setMounted] = React.useState(open),
+    [shown, setShown] = React.useState(false);
+  React.useEffect(() => {
+    if (open) {
+      setMounted(true);
+      let a = requestAnimationFrame(() => {
+        a = requestAnimationFrame(() => setShown(true));
+      });
+      return () => cancelAnimationFrame(a);
+    }
+    setShown(false);
+    const t = setTimeout(() => setMounted(false), 330);
+    return () => clearTimeout(t);
+  }, [open]);
+  const ver = (window.BSV_VARIANTS[id] || []).find(x => x.n === BZ_FINAL[id]);
+  if (!mounted || !ver) return null;
+  return /*#__PURE__*/React.createElement(BV_LIVE.Provider, {
+    value: {
+      onClose,
+      shown,
+      ...ctx
+    }
+  }, ver.render(r));
+}
+window.BzFinalSheet = BzFinalSheet;;
