@@ -63096,18 +63096,18 @@ function BVOffersT({
     }
   }, c.n, " offers")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: 700
     }
   }, c.k), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 12,
+      fontSize: 13,
       color: '#8E8E93',
       marginTop: 1
     }
   }, BV_COLNAME[c.k]), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 11.5,
+      fontSize: 12,
       color: '#AEAEB2',
       marginTop: 1
     }
@@ -63118,7 +63118,7 @@ function BVOffersT({
     const [a, b] = n.toFixed(2).split('.');
     return o.lightCents ? /*#__PURE__*/React.createElement(React.Fragment, null, a, /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: '0.66em',
+        fontSize: 12,
         fontWeight: 500,
         color: '#8E8E93',
         verticalAlign: '0.45em',
@@ -63169,7 +63169,7 @@ function BVOffersT({
     }
   }, o.rank && /*#__PURE__*/React.createElement("span", {
     style: {
-      fontSize: 11.5,
+      fontSize: 12,
       color: '#C7C7CC',
       textAlign: 'right',
       fontVariantNumeric: 'tabular-nums'
@@ -63188,7 +63188,7 @@ function BVOffersT({
         margin: '0 3px',
         boxShadow: isSel ? 'inset 0 0 0 2px #0A84FF' : 'none',
         textAlign: 'center',
-        fontSize: o.cents ? 18 : 15.5,
+        fontSize: o.cents ? 18 : 18,
         fontWeight: o.cents ? 700 : 600,
         fontVariantNumeric: 'tabular-nums',
         color: m && !m.underline ? m.color : '#1C1C1E',
