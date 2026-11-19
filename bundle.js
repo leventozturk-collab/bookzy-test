@@ -2171,7 +2171,207 @@ Object.assign(window, {
   SheetGrabber,
   SheetCloseButton,
   SheetHeader
-});;
+});
+// ══ Press feedback — one system for the whole app (18 Nov 2026) ══
+// A phone app must answer every touch, and a finger hides anything that shrinks. So, following iOS 26:
+//   • buttons (back, camera, round icon buttons, sheet X, refresh, small pills, tab-bar items) GROW a little under the finger
+//     and spring back on release; while held and dragged they lean and stretch toward the finger (the "liquid" feel);
+//   • wide buttons (Search bar, Scan, any call-to-action) grow slightly and their background lightens / darkens;
+//   • rows and cells (offers in the table, settings rows, segment choices, text links) get a soft background highlight, as in iOS lists.
+// It works by itself on everything tappable (any element with a tap handler), so new screens get it without extra code.
+// Opt out with class "bz-nopress". Keys and buttons in the search sheet keep their own feedback (bv-*).
+(function bzPressInstall() {
+  if (typeof document === 'undefined' || window.__bzPress) return;
+  window.__bzPress = true;
+  const SKIP = '.twk-panel, .bv-key, .bv-kk, .bv-btn, .bv-row, .pe-key, .pe-chip, .bz-nopress, input, textarea, select';
+  const SPRING = 'cubic-bezier(.3,1.75,.45,1)';
+  const reduce = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const hasTap = el => {
+    const k = Object.keys(el).find(x => x.startsWith('__reactProps$'));
+    return !!(k && el[k] && typeof el[k].onClick === 'function');
+  };
+  const findTap = t => {
+    for (let el = t; el && el !== document.body; el = el.parentElement) if (el.nodeType === 1 && hasTap(el)) return el;
+    return null;
+  };
+  const alpha = c => {
+    const m = /rgba?\(([^)]+)\)/.exec(c || '');
+    if (!m) return 0;
+    const p = m[1].split(/[,\/\s]+/).filter(Boolean).map(parseFloat);
+    return p.length > 3 ? p[3] : 1;
+  };
+  const lum = c => {
+    const m = /rgba?\(([^)]+)\)/.exec(c || '');
+    if (!m) return 1;
+    const p = m[1].split(/[,\/\s]+/).filter(Boolean).map(parseFloat);
+    return (0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]) / 255;
+  };
+  const backdrop = el => {
+    for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+      const c = getComputedStyle(e).backgroundColor;
+      if (alpha(c) > 0.5) return c;
+    }
+    return 'rgb(255,255,255)';
+  };
+  function classify(el) {
+    const r = el.getBoundingClientRect(),
+      cs = getComputedStyle(el);
+    if (r.width < 8 || r.height < 8) return null;
+    if (r.height > 220 || r.width > 300 && r.height > 130) return null; // backdrops, whole cards, sheets: not buttons
+    const big = Math.max(r.width, r.height),
+      small = Math.min(r.width, r.height);
+    const rad = parseFloat(cs.borderTopLeftRadius) || 0,
+      inline = cs.display === 'inline';
+    const ownBg = alpha(cs.backgroundColor) > 0.2 || cs.backgroundImage && cs.backgroundImage !== 'none' || cs.backdropFilter && cs.backdropFilter !== 'none';
+    const round = rad >= small * 0.4,
+      icon = !!el.querySelector('svg, img');
+    let kind = 'row';
+    if (!inline && big <= 120 && (ownBg && round || icon && (ownBg || !/\S{1}/.test(el.textContent || '') || big <= 96))) kind = 'bubble';else if (!inline && ownBg && r.height <= 66 && rad >= 12) kind = 'cta';
+    const grow = reduce() ? 1 : kind === 'bubble' ? big <= 60 ? 1.14 : 1.08 : kind === 'cta' ? 1.03 : 1;
+    const dark = lum(ownBg && alpha(cs.backgroundColor) > 0.5 ? cs.backgroundColor : backdrop(el)) < 0.4;
+    const tint = kind === 'bubble' ? dark ? 0.14 : 0.08 : kind === 'cta' ? dark ? 0.2 : 0.1 : dark ? 0.16 : 0.09;
+    // a square row that fills its card edge to edge (settings rows): highlight the whole row, clipped to the card's rounded corners
+    let clip = '',
+      fill = false;
+    if (kind === 'row' && !rad) for (let a = el.parentElement, i = 0; a && i < 6; a = a.parentElement, i++) {
+      const as = getComputedStyle(a),
+        ar = parseFloat(as.borderTopLeftRadius) || 0;
+      if (!ar) continue;
+      const b = a.getBoundingClientRect();
+      if (r.width >= b.width - 2 && b.height <= 900) {
+        fill = true;
+        clip = 'inset(' + (b.top - r.top) + 'px ' + (r.right - b.right) + 'px ' + (r.bottom - b.bottom) + 'px ' + (b.left - r.left) + 'px round ' + as.borderRadius + ')';
+      }
+      break;
+    }
+    return {
+      r,
+      kind,
+      grow,
+      tint,
+      dark,
+      clip,
+      radius: rad ? cs.borderRadius : kind === 'row' ? fill ? '0px' : '12px' : kind === 'bubble' ? big <= 60 ? '50%' : '16px' : '0px',
+      inset: !rad && !fill && kind === 'row' && r.width > 200 ? 4 : 0
+    };
+  }
+  let cur = null;
+  function setShape(st, sx, sy, tx, ty) {
+    if (st.c.grow !== 1) {
+      st.el.style.scale = sx + ' ' + sy;
+      st.el.style.translate = tx + 'px ' + ty + 'px';
+    }
+    if (st.ov) {
+      st.ov.style.scale = sx + ' ' + sy;
+      st.ov.style.translate = tx + 'px ' + ty + 'px';
+    }
+  }
+  function down(e) {
+    if (e.button != null && e.button > 0) return;
+    const t = e.target;
+    if (!t || !t.closest || t.closest(SKIP)) return;
+    const el = findTap(t);
+    if (!el || el.closest(SKIP)) return;
+    const c = classify(el);
+    if (!c) return;
+    if (cur) finish(cur, true);
+    const st = cur = {
+      el,
+      c,
+      x0: e.clientX,
+      y0: e.clientY,
+      t0: performance.now(),
+      prevT: el.style.transition,
+      prevS: el.style.scale,
+      prevTr: el.style.translate,
+      ov: null,
+      done: false
+    };
+    if (c.grow !== 1) el.style.transition = (st.prevT ? st.prevT + ', ' : '') + 'scale .16s cubic-bezier(.2,.8,.3,1), translate .16s cubic-bezier(.2,.8,.3,1)';
+    if (c.tint) {
+      const ov = st.ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483000;opacity:0;transition:opacity .12s ease-out, scale .16s cubic-bezier(.2,.8,.3,1), translate .16s cubic-bezier(.2,.8,.3,1);' + 'left:' + (c.r.left + c.inset) + 'px;top:' + (c.r.top + (c.inset ? 2 : 0)) + 'px;width:' + (c.r.width - c.inset * 2) + 'px;height:' + (c.r.height - (c.inset ? 4 : 0)) + 'px;border-radius:' + c.radius + ';' + 'background:' + (c.dark ? 'rgba(255,255,255,' + c.tint + ')' : 'rgba(60,60,67,' + c.tint + ')') + (c.clip ? ';clip-path:' + c.clip : '');
+      document.body.appendChild(ov);
+    }
+    // rows wait a moment before lighting up, so starting a scroll doesn't flash them (as iOS lists do)
+    const show = () => {
+      if (st.done) return;
+      if (st.ov) st.ov.style.opacity = '1';
+      setShape(st, c.grow, c.grow, 0, 0);
+    };
+    if (c.kind === 'row' && e.pointerType === 'touch') st.wait = setTimeout(show, 70);else requestAnimationFrame(show);
+  }
+  function move(e) {
+    const st = cur;
+    if (!st || st.done || st.c.grow === 1 || st.c.kind === 'row') return;
+    const dx = e.clientX - st.x0,
+      dy = e.clientY - st.y0,
+      d = Math.hypot(dx, dy);
+    if (d < 3) return;
+    const lim = st.c.kind === 'bubble' ? 9 : 5,
+      k = v => Math.max(-lim, Math.min(lim, v * 0.22));
+    const s = Math.min(d / 240, st.c.kind === 'bubble' ? Math.max(st.c.r.width, st.c.r.height) <= 60 ? 0.09 : 0.05 : 0.03),
+      g = st.c.grow,
+      horiz = Math.abs(dx) >= Math.abs(dy);
+    st.el.style.transition = (st.prevT ? st.prevT + ', ' : '') + 'scale .08s linear, translate .08s linear';
+    if (st.ov) st.ov.style.transition = 'opacity .12s ease-out, scale .08s linear, translate .08s linear';
+    setShape(st, (horiz ? g + s : g - s * 0.5).toFixed(3), (horiz ? g - s * 0.5 : g + s).toFixed(3), k(dx).toFixed(1), k(dy).toFixed(1));
+  }
+  function finish(st, now) {
+    if (!st || st.done) return;
+    st.done = true;
+    clearTimeout(st.wait);
+    if (cur === st) cur = null;
+    const held = performance.now() - st.t0,
+      late = now ? 0 : Math.max(0, 130 - held); // a quick tap still shows for a beat
+    if (late && st.ov && st.c.kind === 'row') {
+      st.ov.style.opacity = '1';
+    }
+    setTimeout(() => {
+      const el = st.el,
+        back = '.46s ' + SPRING;
+      if (st.c.grow !== 1) {
+        el.style.transition = (st.prevT ? st.prevT + ', ' : '') + 'scale ' + back + ', translate ' + back;
+        el.style.scale = '1 1';
+        el.style.translate = '0px 0px';
+      }
+      if (st.ov) {
+        st.ov.style.transition = 'opacity .28s ease-out, scale ' + back + ', translate ' + back;
+        st.ov.style.opacity = '0';
+        st.ov.style.scale = '1 1';
+        st.ov.style.translate = '0px 0px';
+      }
+      setTimeout(() => {
+        if (st.ov && st.ov.parentNode) st.ov.parentNode.removeChild(st.ov);
+        if (st.c.grow !== 1 && !(cur && cur.el === el)) {
+          el.style.transition = st.prevT;
+          el.style.scale = st.prevS;
+          el.style.translate = st.prevTr;
+        }
+      }, 480);
+    }, late);
+  }
+  window.__bzPressInfo = el => {
+    const t = findTap(el);
+    const c = t && !t.closest(SKIP) ? classify(t) : null;
+    return c ? {
+      kind: c.kind,
+      grow: c.grow,
+      tint: c.tint,
+      w: Math.round(c.r.width),
+      h: Math.round(c.r.height)
+    } : null;
+  }; // for checks
+  const up = () => finish(cur);
+  document.addEventListener('pointerdown', down, true);
+  document.addEventListener('pointermove', move, true);
+  document.addEventListener('pointerup', up, true);
+  document.addEventListener('pointercancel', up, true);
+  document.addEventListener('scroll', () => {
+    if (cur) finish(cur, true);
+  }, true); // the page moved under the finger: it was a scroll, not a press
+  window.addEventListener('blur', up);
+})();;
 // tabbar.jsx — Floating liquid-glass bottom tab bar (iOS 26)
 
 function TabBar({
@@ -2196,6 +2396,40 @@ function TabBar({
     label: 'More',
     Icon: IconEllipsis
   }];
+  // Hold and slide, as on iOS 26 tab bars (Slack, WhatsApp): while a finger is on the bar, the selection becomes a glass lens
+  // that grows and follows the finger along the bar; the tab under it lights up; lifting the finger selects that tab.
+  // The icons and labels themselves stay in place (nothing leans out of the bar).
+  const STEP = 84,
+    FIRST = 46; // tab centres, measured from the bar's left edge: 46, 130, 214, 298
+  const barRef = React.useRef(null);
+  const [drag, setDrag] = React.useState(null); // { x } while a finger is down
+  const xOf = e => {
+    const b = barRef.current.getBoundingClientRect();
+    return Math.max(FIRST - 8, Math.min(FIRST + STEP * (tabs.length - 1) + 8, e.clientX - b.left));
+  };
+  const idxOf = x => Math.max(0, Math.min(tabs.length - 1, Math.round((x - FIRST) / STEP)));
+  const down = e => {
+    if (e.button > 0) return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+    setDrag({
+      x: xOf(e)
+    });
+  };
+  const move = e => {
+    if (drag) setDrag({
+      x: xOf(e)
+    });
+  };
+  const up = e => {
+    if (!drag) return;
+    const i = idxOf(xOf(e));
+    setDrag(null);
+    if (onChange) onChange(tabs[i].id);
+  };
+  const activeIdx = tabs.findIndex(t => t.id === active);
+  const hotIdx = drag ? idxOf(drag.x) : activeIdx; // the tab that reads as selected right now
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
@@ -2209,6 +2443,12 @@ function TabBar({
       pointerEvents: 'none'
     }
   }, /*#__PURE__*/React.createElement("div", {
+    ref: barRef,
+    className: "bz-nopress",
+    onPointerDown: down,
+    onPointerMove: move,
+    onPointerUp: up,
+    onPointerCancel: () => setDrag(null),
     style: {
       position: 'relative',
       display: 'flex',
@@ -2216,9 +2456,11 @@ function TabBar({
       gap: 4,
       padding: 6,
       borderRadius: 28,
+      touchAction: 'none',
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
       boxShadow: dark ? '0 4px 12px rgba(0,0,0,0.45), 0 18px 40px rgba(0,0,0,0.35)' : '0 4px 14px rgba(15,15,20,0.06), 0 16px 40px rgba(15,15,20,0.10)',
-      pointerEvents: 'auto',
-      overflow: 'hidden'
+      pointerEvents: 'auto'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2238,29 +2480,39 @@ function TabBar({
       boxShadow: dark ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'inset 0 1px 0 rgba(255,255,255,0.7)',
       pointerEvents: 'none'
     }
-  }), tabs.some(t => t.id === active) && /*#__PURE__*/React.createElement("div", {
-    className: "bz-motion",
+  }), (activeIdx >= 0 || drag) && /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
       top: 10,
       left: 10,
       width: 72,
       height: 52,
-      borderRadius: 18,
-      background: TOKENS.primarySoft,
+      borderRadius: drag ? 26 : 18,
       pointerEvents: 'none',
-      transform: `translateX(${tabs.findIndex(t => t.id === active) * 84}px)`,
-      transition: 'transform 0.34s cubic-bezier(0.22, 0.61, 0.36, 1)'
+      zIndex: drag ? 2 : 0,
+      // at rest: the soft tile. Held: a glass lens — bigger than the bar, clear, with a bright rim and a soft shadow
+      background: drag ? dark ? 'rgba(255,255,255,0.14)' : 'rgba(120,120,128,0.10)' : TOKENS.primarySoft,
+      backdropFilter: drag ? 'blur(1.5px) saturate(170%) brightness(1.04)' : 'none',
+      WebkitBackdropFilter: drag ? 'blur(1.5px) saturate(170%) brightness(1.04)' : 'none',
+      boxShadow: drag ? '0 10px 26px rgba(15,15,20,0.18), 0 0 0 0.5px rgba(15,15,20,0.10), inset 0 0 0 1.5px rgba(255,255,255,0.95), inset 0 2px 8px rgba(255,255,255,0.75), inset 0 -2px 6px rgba(15,15,20,0.05)' : 'none',
+      transform: `translateX(${drag ? drag.x - FIRST : activeIdx * STEP}px) scale(${drag ? 1.3 : 1}, ${drag ? 1.36 : 1})`,
+      transition: drag ? 'transform 0.09s linear, border-radius 0.18s ease, background 0.18s ease, box-shadow 0.18s ease' : 'transform 0.42s cubic-bezier(.3,1.5,.45,1), border-radius 0.25s ease, background 0.25s ease, box-shadow 0.25s ease'
     }
   }), tabs.map(t => {
-    const isActive = t.id === active;
+    const isActive = tabs[hotIdx] && t.id === tabs[hotIdx].id;
+    const lifted = !!drag && isActive; // under the lens while held: a touch bigger
     const ink = isActive ? TOKENS.primary : dark ? 'rgba(255,255,255,0.62)' : '#6E6E73';
     return /*#__PURE__*/React.createElement("button", {
       key: t.id,
-      onClick: () => onChange && onChange(t.id),
+      className: "bz-nopress",
+      onClick: e => {
+        if (e.detail === 0 && onChange) onChange(t.id);
+      } /* keyboard only; touch and mouse select on release */,
       style: {
         position: 'relative',
-        zIndex: 1,
+        zIndex: 3,
+        transform: lifted ? 'scale(1.12)' : 'scale(1)',
+        transition: 'transform 0.2s cubic-bezier(.3,1.4,.5,1)',
         background: 'none',
         border: 'none',
         cursor: 'pointer',
@@ -38016,8 +38268,9 @@ function PSBar({
     WebkitBackdropFilter: 'blur(22px) saturate(180%)',
     boxShadow: bzFloatShadow('0 2px 8px rgba(15,15,20,0.10), 0 12px 30px rgba(15,15,20,0.16)') + ', inset 0 0 0 0.5px rgba(255,255,255,0.6)'
   };
-  const circle = (child, onClick) => /*#__PURE__*/React.createElement("div", {
+  const circle = (child, onClick, back) => /*#__PURE__*/React.createElement("div", {
     onClick: collapsed ? undefined : onClick,
+    "data-bz-back": back ? '' : undefined,
     style: {
       width: collapsed ? 0 : 48,
       height: 48,
@@ -38040,7 +38293,8 @@ function PSBar({
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
-      left: 0,
+      zIndex: 31,
+      /* above the not-found card overlay (30), below sheets */left: 0,
       right: 0,
       bottom: collapsed ? 12 : 26,
       display: 'flex',
@@ -38061,7 +38315,7 @@ function PSBar({
     strokeWidth: "2.2",
     strokeLinecap: "round",
     strokeLinejoin: "round"
-  })), onBack), /*#__PURE__*/React.createElement("div", {
+  })), onBack, true), /*#__PURE__*/React.createElement("div", {
     onClick: onSearch,
     style: {
       flex: collapsed ? '0 1 auto' : 1,
@@ -38414,6 +38668,50 @@ const PS_PUBLISHERS = ['Penguin Random House', 'HarperCollins', 'Simon & Schuste
 // outside the Books category still belong to one of these).
 const PS_NONBOOK_CATS = ['Toys & Games', 'Office Products', 'Home & Kitchen', 'Electronics', 'Health & Household', 'Sports & Outdoors', 'Tools & Home Improvement', 'Kitchen & Dining'];
 const PS_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const PS_SHARED_SCAN_KEY = 'bzpg.lastScan';
+// New item (top bar button / R): the kind of item comes from the top bar's New item menu (shared, browser storage 'bzpg.newItem')
+function psNewItemCfg() {
+  try {
+    const v = JSON.parse(localStorage.getItem('bzpg.newItem') || 'null');
+    return v && typeof v === 'object' ? v : {
+      v: 'trigger',
+      target: true,
+      flags: false,
+      random: true
+    };
+  } catch (e) {
+    return {
+      v: 'trigger',
+      target: true,
+      flags: false,
+      random: true
+    };
+  }
+}
+function psNewItemResult() {
+  const cfg = psNewItemCfg();
+  let res = window.__bzTweaks && window.__bzTweaks.result || 'found'; // Tweaks → Result (Playground)
+  if (res === 'random') {
+    const x = Math.random();
+    res = x < 0.55 ? 'found' : x < 0.70 ? 'offline' : x < 0.85 ? 'nolisting' : 'invalid';
+  } // Random: mostly found, sometimes one of the not-found states
+  if (res !== 'found' && typeof psNfResult === 'function') return psNfResult(res); // a not-found state
+  return typeof pstvMakeResult === 'function' ? pstvMakeResult(cfg) : psGenerateResult();
+}
+function psLoadSharedScan() {
+  try {
+    const v = localStorage.getItem(PS_SHARED_SCAN_KEY);
+    const r = v ? JSON.parse(v) : null;
+    return r && r.offers && r.verdict ? r : null;
+  } catch (e) {
+    return null;
+  }
+}
+function psSaveSharedScan(r) {
+  try {
+    localStorage.setItem(PS_SHARED_SCAN_KEY, JSON.stringify(r));
+  } catch (e) {}
+}
 function psGenerateResult(seed) {
   // Category / binding / cover. Every item is backed by a real book (cover +
   // ISBN-13) — even "Non-book" ones, since Amazon sometimes lists books
@@ -39603,7 +39901,7 @@ function PSZBBTiles({
       }
     }, pszM(b.current))), /*#__PURE__*/React.createElement("div", {
       style: {
-        marginTop: 11,
+        marginTop: 7,
         position: 'relative',
         height: 5,
         borderRadius: 3,
@@ -39622,12 +39920,13 @@ function PSZBBTiles({
       }
     })), /*#__PURE__*/React.createElement("div", {
       style: {
-        marginTop: 8,
+        marginTop: 11,
         display: 'flex',
         justifyContent: 'space-between',
-        fontSize: 11.5,
-        fontWeight: 500,
-        color: TOKENS.textTertiary,
+        fontSize: 12.5,
+        lineHeight: '14px',
+        fontWeight: 600,
+        color: TOKENS.textSecondary,
         fontVariantNumeric: 'tabular-nums'
       }
     }, /*#__PURE__*/React.createElement("span", null, pszM(b.min)), /*#__PURE__*/React.createElement("span", null, pszM(b.max))));
@@ -40040,13 +40339,22 @@ function pskSoftUnits(v) {
     color: '#B4B4BA',
     fontWeight: 600
   };
+  // dollar amounts: cents small and raised, like the offers table (13.61 → 13 61)
+  const p = m[1] && !m[3] ? /^(\d[\d,]*)\.(\d\d)$/.exec(m[2]) : null;
+  const num = p ? /*#__PURE__*/React.createElement(React.Fragment, null, p[1], /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: '0.66em',
+      verticalAlign: '0.38em',
+      marginLeft: 1
+    }
+  }, p[2])) : m[2];
   return /*#__PURE__*/React.createElement(React.Fragment, null, m[1] && /*#__PURE__*/React.createElement("span", {
     style: {
       ...g,
       fontSize: '0.8em',
       marginRight: 1
     }
-  }, "$"), m[2], m[3] && /*#__PURE__*/React.createElement("span", {
+  }, "$"), num, m[3] && /*#__PURE__*/React.createElement("span", {
     style: {
       ...g,
       marginLeft: 1
@@ -40143,7 +40451,7 @@ const pskRow = (h, extra) => ({
   ...extra
 });
 const pskChartProps = c => ({
-  w: 402,
+  w: c.w || 402,
   range: c.range,
   visible: c.visible,
   srFlip: c.srFlip,
@@ -40178,7 +40486,8 @@ function PSKCard1({
       height: 200
     }
   }, c.loading ? /*#__PURE__*/React.createElement(PSKLoading, {
-    style: c.loadStyle
+    style: c.loadStyle,
+    w: c.w
   }) : /*#__PURE__*/React.createElement("div", {
     key: "chart",
     className: c.loadStyle === 'draw' ? 'psk-draw' : 'psk-fade'
@@ -40241,10 +40550,11 @@ function PSKLegendSkel() {
   }))));
 }
 function PSKLoading({
-  style = 'shimmer'
+  style = 'shimmer',
+  w = 402
 }) {
   // the chart's frame and grid (same box as the loaded chart), with the loading look on top
-  const W = 402,
+  const W = w,
     H = 200,
     pl = 38,
     pr = 42,
@@ -40762,7 +41072,8 @@ function PSZEmptyLower() {
 }
 function PSKChartCard({
   keepa,
-  loading
+  loading,
+  w
 }) {
   const e = keepa.ext;
   const range = e.range === '3m' ? '3m' : '6m';
@@ -40788,14 +41099,22 @@ function PSKChartCard({
     setSettingsOpen: () => keepa.openSettings && keepa.openSettings(),
     onExpand: () => e.setFullScreen(true),
     loading: !!loading,
-    loadStyle: 'sweep'
-  }; // chart loading look: set to Sweep
+    loadStyle: 'sweep',
+    w
+  }; // chart loading look: set to Sweep; w: chart width (370 inside the card)
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, PSK_LOAD_CSS), /*#__PURE__*/React.createElement(PSKCard1, {
     c: c
   }));
 }
 
 // ── lower zone of the new design (V3): [Buy Box tiles] · chart · Yours · Elsewhere. Shared by the Pro Scan page and the Scan (camera) page ──
+// Yours and Elsewhere share one cream section (decided 17 Nov 2026): Yours starts it, Elsewhere continues it without a divider
+function pszSectionBgs() {
+  return {
+    elsewhere: PS_WARM,
+    yours: PS_WARM
+  };
+}
 function PSZLower({
   result,
   lo,
@@ -40828,16 +41147,40 @@ function PSZLower({
     buyBox: result.buyBox,
     corner: !!lo.bbCorner,
     r24: !!lo.r24
-  })), /*#__PURE__*/React.createElement(PSKChartCard, {
-    keepa: keepa,
-    loading: !!lo.r24 && histState === 'pending'
   })), /*#__PURE__*/React.createElement("div", {
     style: {
-      padding: '24px 0 26px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 14
+      padding: '0 16px'
     }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderRadius: 24,
+      boxShadow: TOKENS.shadow,
+      overflow: 'hidden',
+      background: '#fff'
+    }
+  }, /*#__PURE__*/React.createElement(PSKChartCard, {
+    keepa: keepa,
+    w: 370,
+    loading: !!lo.r24 && histState === 'pending'
+  })))), /*#__PURE__*/React.createElement("div", {
+    style: (() => {
+      const sb = pszSectionBgs(),
+        bg = sb.yours;
+      return bg ? {
+        background: bg,
+        marginTop: 24,
+        padding: '26px 0 10px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+        borderBottom: 'none'
+      } : {
+        padding: '24px 0 26px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14
+      };
+    })()
   }, lo.r24 && window.PSTVDotsAt ? /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
@@ -40898,26 +41241,22 @@ function PSZLower({
     tall: !!lo.ysEmptyTall
   }, "No past sales on this ASIN"))))), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: PS_WARM,
+      background: pszSectionBgs().elsewhere,
       padding: `24px 0 ${padBottom}px`,
       display: 'flex',
       flexDirection: 'column',
       gap: 14
     }
-  }, pszChapter('Elsewhere'), /*#__PURE__*/React.createElement("div", {
+  }, pszChapter('Elsewhere', sbyb.enabled ? 'Buyback & more' : 'More research'), /*#__PURE__*/React.createElement("div", {
     style: {
+      padding: '0 16px',
       display: 'flex',
       flexDirection: 'column',
-      gap: 28,
-      paddingTop: 4
+      gap: 12
     }
-  }, sbyb.enabled && /*#__PURE__*/React.createElement(GDSection, {
-    label: "Buyback"
-  }, /*#__PURE__*/React.createElement(PSBuyback, {
+  }, sbyb.enabled && /*#__PURE__*/React.createElement(PSBuyback, {
     offer: result.sbybOffer
-  })), /*#__PURE__*/React.createElement(GDSection, {
-    label: "More research"
-  }, /*#__PURE__*/React.createElement(PSExternal, null)))));
+  }), /*#__PURE__*/React.createElement(PSExternal, null))));
 }
 // Main app, "New version" top design: the page as V3 on Pro Scan Expanded (lower zone with BB tiles, the C1 chart card,
 // "Yours" with the Z1.1a cards, warm "Elsewhere"; offers table footer "• AMZ | More offers" centred; Buy Box value top right)
@@ -40928,8 +41267,8 @@ const PSZ_APP_LAYOUT = {
   mergeHist: true,
   cardLead: 'fact',
   ghostCount: 'text',
-  celeb: 'poppers',
-  gdFade: 160,
+  celeb: 'off',
+  /* no confetti on a trigger accept */gdFade: 160,
   noGdTitle: true,
   zone8: true,
   offersFoot: 'amz',
@@ -40945,8 +41284,11 @@ function ProScanPage({
   onClose,
   offersComponent,
   initialResult,
-  layoutOpts: layoutOptsIn
+  layoutOpts: layoutOptsIn,
+  initialNf,
+  nfStyle: nfStyleIn
 }) {
+  // initialNf / nfStyle: the not-found sketch
   // no layoutOpts given (the Main app): use V3's when the "Top design" tweak is on New version
   const tw = window.__bzTweaks || {};
   const layoutOpts = layoutOptsIn || (tw.proScanTop === 'a11' || tw.proScanTop === 'v3' ? PSZ_APP_LAYOUT : undefined); // layoutOpts: extra top-design options (used by the Pro Scan Expanded page's "New" column)
@@ -40962,8 +41304,27 @@ function ProScanPage({
   // the user searches or scans. Regenerated on each search/scan.
   // Main app START_VIEW.camera: open straight on the camera page with a scanned item
   const camStart = !!(window.__bzStart && window.__bzStart.camera && !layoutOptsIn);
-  const [startRes] = React.useState(() => initialResult || (camStart ? psGenerateResult() : null));
+  // Playground artifact: the last scanned item is shared between Playground and Release (and survives switching), so the page never opens empty after the first scan
+  const shareScan = !layoutOptsIn && !initialResult && !initialNf;
+  const [startRes] = React.useState(() => initialResult || (camStart ? psGenerateResult() : null) || (shareScan ? psLoadSharedScan() : null));
   const [result, setResult] = React.useState(startRes);
+  // nothing found (not found / offline / no listing / invalid): shown instead of the page until the next item
+  const [nf, setNf] = React.useState(initialNf || null);
+  const prevResRef = React.useRef(result);
+  React.useEffect(() => {
+    if (result && result !== prevResRef.current) setNf(null);
+    prevResRef.current = result;
+  }, [result]);
+  const nfStyle = nfStyleIn || 'sheet6'; // not-found states: V6 card overlay (decided 17 Nov 2026)
+  const nfSheet = /^sheet/.test(nfStyle); // card overlays: the previous result stays behind
+  const [searchInit, setSearchInit] = React.useState(null); // the search sheet opens with this number in it, selected (not-found → Edit)
+  const openSearchWith = q => {
+    setSearchInit(q || null);
+    setSearchOpen(true);
+  };
+  React.useEffect(() => {
+    if (shareScan && result) psSaveSharedScan(result);
+  }, [result]);
   // r24 (V3 / Main app): your stock / past sales are "checked" 3 s after the scan — until then the history dots show as not checked
   const [histState, setHistState] = React.useState('pending');
   React.useEffect(() => {
@@ -41016,18 +41377,37 @@ function ProScanPage({
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       if (searchOpen) return;
       e.preventDefault();
-      const fresh = psGenerateResult(); // no seed → fully random
+      onNew();
+    };
+    // New item: R, or the top bar's New item button (event 'bz:new-item'); the kind of item follows its menu
+    const onNew = () => {
+      if (layoutOptsIn || initialResult || initialNf) return; // sketches keep their own items
+      const fresh = psNewItemResult();
+      if (fresh && fresh.nf) {
+        setNf(fresh);
+        if (!nfSheet) {
+          setResult(null);
+          setSel(null);
+        }
+        return;
+      } // card overlay: the previous result stays behind
       setResult(fresh);
       setSel(psInitSel(fresh));
       setSweepKey(k => k + 1); // replay the sweep
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('bz:new-item', onNew);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('bz:new-item', onNew);
+    };
   }, [searchOpen]);
   const onScroll = e => {
     const y = e.target.scrollTop;
     const prev = lastY.current;
+    const atEnd = e.target.scrollHeight - e.target.clientHeight - y < 24; // reached the bottom of the page
     if (y < 48) setBarCollapsed(false); // near top → always expanded
+    else if (atEnd) setBarCollapsed(false); // end of the page → expand again (like Safari)
     else if (y > prev + 5) setBarCollapsed(true); // scrolling down → collapse
     else if (y < prev - 5) setBarCollapsed(false); // scrolling up → expand
     lastY.current = y;
@@ -41107,7 +41487,7 @@ function ProScanPage({
     trigBg,
     openOffersSettings: () => setOffSetOpen(true),
     openRecentSales: () => setSalesOpen(true),
-    openSearch: () => setSearchOpen(true),
+    openSearch: () => openSearchWith(nf ? nf.query : result ? result.isbn : null),
     openCamera: openCam,
     mode: searchMode,
     setMode: changeSearchMode,
@@ -41216,7 +41596,17 @@ function ProScanPage({
       overflowX: 'hidden',
       WebkitOverflowScrolling: 'touch'
     }
-  }, a11 && !empty ? /*#__PURE__*/React.createElement("div", {
+  }, nf && !nfSheet && window.PSNotFound ? /*#__PURE__*/React.createElement(window.PSNotFound, {
+    nf: nf,
+    style: nfStyle,
+    modeName: (SEARCH_MODES[searchMode] || SEARCH_MODES.cl).name.replace(' Search', ''),
+    onLive: () => {
+      changeSearchMode('lv');
+      runScan();
+    },
+    onSearch: openSearchWith,
+    onScan: runScan
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, a11 && !empty ? /*#__PURE__*/React.createElement("div", {
     className: layoutOpts && layoutOpts.num700 ? 'psz-n700' : undefined,
     style: {
       marginLeft: inset,
@@ -41396,7 +41786,7 @@ function ProScanPage({
       opacity: empty ? 0.45 : 1,
       pointerEvents: empty ? 'none' : 'auto'
     }
-  }, /*#__PURE__*/React.createElement(PSExternal, null)))))), /*#__PURE__*/React.createElement("style", null, `@keyframes ps-sweep {
+  }, /*#__PURE__*/React.createElement(PSExternal, null))))))), /*#__PURE__*/React.createElement("style", null, `@keyframes ps-sweep {
         0% { transform: translateX(-130%) skewX(-14deg); opacity: 0; }
         12% { opacity: 1; }
         100% { transform: translateX(130%) skewX(-14deg); opacity: 0; }
@@ -41438,7 +41828,7 @@ function ProScanPage({
     v: window.PSTV_APP_TOP.bar
   })) : /*#__PURE__*/React.createElement(PSBar, {
     onBack: onClose,
-    onSearch: () => setSearchOpen(true),
+    onSearch: () => openSearchWith(nf ? nf.query : result ? result.isbn : null) /* the sheet opens with the current search in the field, selected (a found book's number, or the not-found search) */,
     onScan: runScan,
     onCamera: () => {
       let r = result;
@@ -41449,7 +41839,7 @@ function ProScanPage({
       }
       setCameraOpen(true);
     },
-    searchParam: result ? result.isbn : null,
+    searchParam: nf ? nf.query : result ? result.isbn : null,
     collapsed: barCollapsed,
     mode: searchMode,
     onChangeMode: changeSearchMode,
@@ -41488,7 +41878,11 @@ function ProScanPage({
     id: "search",
     open: searchOpen,
     r: result,
-    onClose: () => setSearchOpen(false),
+    initQuery: searchInit,
+    onClose: () => {
+      setSearchOpen(false);
+      setSearchInit(null);
+    },
     onSubmit: runSearch,
     searchMode: searchMode,
     onChangeMode: changeSearchMode
@@ -41557,7 +41951,18 @@ function ProScanPage({
     open: salesOpen && !!result,
     result: result,
     onClose: () => setSalesOpen(false)
-  })), keepa.overlay, /*#__PURE__*/React.createElement(PSAsrSheet, {
+  })), nf && nfSheet && window.PSNotFound && /*#__PURE__*/React.createElement(window.PSNotFound, {
+    nf: nf,
+    style: nfStyle,
+    modeName: (SEARCH_MODES[searchMode] || SEARCH_MODES.cl).name.replace(' Search', ''),
+    onLive: () => {
+      changeSearchMode('lv');
+      runScan();
+    },
+    onSearch: openSearchWith,
+    onScan: runScan,
+    onClose: () => setNf(null)
+  }), keepa.overlay, /*#__PURE__*/React.createElement(PSAsrSheet, {
     open: statSheet === 'asr',
     asr: result ? result.asr : 0,
     nonBook: a11 && result && result.category !== 'Book' ? result.amazonCategory || true : false,
@@ -41743,15 +42148,17 @@ const PS_GOLD = '#F2B736';
 // camera stat values, same logic as the Pro Scan page: ASR K rounded, M with one decimal; K / M in a soft white
 // (they change the number 1000-fold), "/180" and "$" fainter and smaller (there only because they have to be)
 const pscUnitKM = {
-  fontSize: 15,
+  fontSize: '0.72em',
   fontWeight: 600,
-  color: 'rgba(255,255,255,0.62)',
+  color: 'inherit',
+  opacity: 0.66,
   marginLeft: 4
 };
 const pscUnitFix = {
-  fontSize: 13,
+  fontSize: '0.62em',
   fontWeight: 500,
-  color: 'rgba(255,255,255,0.38)'
+  color: 'inherit',
+  opacity: 0.5
 };
 function pscAsrNode(n) {
   if (n == null) return '–';
@@ -41763,20 +42170,78 @@ function pscAsrNode(n) {
   }, "K"));
   return String(n);
 }
+// Camera stats (ASR · Sold days · Profit) — versions, tweak "Camera stats". They stay inside the camera (its place and size are fixed),
+// so legibility has to come from the chip itself, whatever the camera is looking at.
+//   glass: the first design — see-through, value only        solid: near-black, bigger value, label under it
+//   white: white chips, dark value                          color: near-black, each value in its own colour
+//   bar:   one near-black bar across the camera, three columns, biggest value
+const PSC_STAT_COL = {
+  asr: '#FFD166',
+  soldDays: '#6FD3FF',
+  profit: '#4ADE80',
+  loss: '#FF7B72'
+};
 function PSCamChip({
   value,
-  onTap
+  label,
+  onTap,
+  kind = 'glass',
+  color,
+  bare
 }) {
+  const K = {
+    glass: {
+      bg: 'rgba(20,20,24,0.5)',
+      bd: '1px solid rgba(255,255,255,0.12)',
+      fg: '#fff',
+      fs: 20,
+      pad: '9px 8px',
+      blur: true
+    },
+    solid: {
+      bg: 'rgba(12,12,15,0.9)',
+      bd: '1px solid rgba(255,255,255,0.16)',
+      fg: '#fff',
+      fs: 24,
+      pad: '9px 6px'
+    },
+    white: {
+      bg: '#fff',
+      bd: '1px solid rgba(0,0,0,0.06)',
+      fg: '#111114',
+      fs: 24,
+      pad: '9px 6px',
+      sh: '0 3px 12px rgba(0,0,0,0.28)'
+    },
+    color: {
+      bg: 'rgba(12,12,15,0.9)',
+      bd: '1px solid rgba(255,255,255,0.16)',
+      fg: color || '#fff',
+      fs: 24,
+      pad: '9px 6px'
+    },
+    bar: {
+      bg: 'transparent',
+      bd: 'none',
+      fg: '#fff',
+      fs: 26,
+      pad: '9px 4px'
+    }
+  }[kind] || {};
   return /*#__PURE__*/React.createElement("div", {
     onClick: onTap,
     style: {
       flex: 1,
-      background: 'rgba(20,20,24,0.5)',
-      backdropFilter: 'blur(8px)',
-      WebkitBackdropFilter: 'blur(8px)',
-      border: '1px solid rgba(255,255,255,0.12)',
+      minWidth: 0,
+      background: bare ? 'transparent' : K.bg,
+      ...(K.blur ? {
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)'
+      } : {}),
+      border: bare ? 'none' : K.bd,
       borderRadius: 11,
-      padding: '9px 8px',
+      boxShadow: bare ? 'none' : K.sh || 'none',
+      padding: K.pad,
       textAlign: 'center',
       cursor: 'pointer',
       WebkitTapHighlightColor: 'transparent'
@@ -41784,14 +42249,26 @@ function PSCamChip({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: TOKENS.fontDisplay,
-      fontSize: 20,
+      fontSize: K.fs,
       fontWeight: 700,
       letterSpacing: -0.4,
-      color: '#fff',
+      lineHeight: 1.1,
+      color: K.fg,
       whiteSpace: 'nowrap',
       fontVariantNumeric: 'tabular-nums'
     }
-  }, value));
+  }, value), K.lab && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 3,
+      fontFamily: TOKENS.font,
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: 0.7,
+      textTransform: 'uppercase',
+      color: K.lab,
+      whiteSpace: 'nowrap'
+    }
+  }, label));
 }
 // ── what the camera has read: a pill right above "Read ISBN · Barcode" (placement measured on the live app) ──
 // Read ISBN: while the camera reads text it shows its attempts (gray, flickering) — so the seller sees it working even
@@ -41982,19 +42459,29 @@ function PSLFoundText({
   mode,
   delay = 0
 }) {
+  // the found number sits in a light gray pill, so it reads over whatever the camera is looking at
   return /*#__PURE__*/React.createElement("span", {
     style: {
       ...PSL_LINE,
       top: pslTop(mode),
-      gap: 8,
       opacity: 0,
-      animation: `psl-in .3s ease-out ${delay}s forwards`,
+      animation: `psl-in .3s ease-out ${delay}s forwards`
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '6px 14px 6px 7px',
+      borderRadius: 999,
+      background: 'rgba(236,236,240,0.94)',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.22)',
       fontFamily: TOKENS.font,
       fontSize: 16,
       fontWeight: 700,
       letterSpacing: 0.8,
       fontVariantNumeric: 'tabular-nums',
-      color: '#fff'
+      color: '#1c1c1e'
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -42009,7 +42496,7 @@ function PSLFoundText({
   }, /*#__PURE__*/React.createElement(PSLCheck, {
     size: 11,
     delay: delay + 0.1
-  })), code);
+  })), code));
 }
 // 2 · found: the celebration, centred on the camera ('check' and 'thumbs'); 'frame' rings the frame instead (in PSCameraCard)
 function PSLCelebrate({
@@ -42237,6 +42724,298 @@ function PSLLoadingTop({
     }
   })))), bar);
 }
+// ── what the camera sees (a drawing, not a real camera): a hand holding a book's back cover up to the lens, shelves behind.
+// blur 0…1: the whole-page scroll on the Scan page blurs it fully once the page moves.
+const PSC_SPINES = ['#7a3b2e', '#c9a45c', '#2f5d62', '#8c4a5a', '#d8c7a0', '#3b4a6b', '#a3552f', '#56704a', '#b98b4e', '#40324f', '#c26a4a', '#e0d2b4', '#2d4739', '#935d3a'];
+const PSC_BARS = '3112213121132211312212311213112231121321221131221123';
+// Levent's own desk photo (taken from his live-app screenshot, app overlays removed) — the default camera picture; the drawing below stays as the fallback
+const PSC_PHOTO = 'data:image/jpeg;base64,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';
+function PSCamScene({
+  blur = 0,
+  code
+}) {
+  if (PSC_PHOTO) return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      overflow: 'hidden',
+      background: '#1d1612'
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: PSC_PHOTO,
+    alt: "",
+    draggable: false,
+    style: {
+      display: 'block',
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      filter: blur ? `blur(${(blur * 26).toFixed(1)}px) saturate(${(1 + blur * 0.25).toFixed(2)})` : 'none',
+      transform: `scale(${(1.02 + blur * 0.22).toFixed(3)})`
+    }
+  }));
+  const bars = [];
+  let bx = 0;
+  PSC_BARS.split('').forEach((c, i) => {
+    const w = +c * 1.08;
+    if (i % 2 === 0) bars.push(/*#__PURE__*/React.createElement("rect", {
+      key: i,
+      x: bx,
+      y: "0",
+      width: w,
+      height: "36"
+    }));
+    bx += w;
+  });
+  const shelf = (y, seed) => {
+    const out = [];
+    let x = -6,
+      i = seed;
+    while (x < 380) {
+      const w = 11 + i * 7 % 13,
+        h = 62 + i * 11 % 24,
+        lean = i * 5 % 9 === 0 ? 5 : 0;
+      out.push(/*#__PURE__*/React.createElement("rect", {
+        key: y + '-' + i,
+        x: x,
+        y: y + 90 - h,
+        width: w,
+        height: h,
+        rx: "1.5",
+        fill: PSC_SPINES[(i * 3 + seed) % PSC_SPINES.length],
+        transform: lean ? `rotate(${lean} ${x} ${y + 90})` : undefined
+      }));
+      x += w + 1.5;
+      i++;
+    }
+    return out;
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      overflow: 'hidden',
+      background: '#1d1612'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    viewBox: "0 0 370 274",
+    preserveAspectRatio: "xMidYMid slice",
+    width: "100%",
+    height: "100%",
+    style: {
+      display: 'block',
+      filter: blur ? `blur(${(blur * 26).toFixed(1)}px) saturate(${(1 + blur * 0.25).toFixed(2)})` : 'none',
+      transform: `scale(${(1.02 + blur * 0.22).toFixed(3)})`
+    }
+  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("filter", {
+    id: "psc-dof",
+    x: "-5%",
+    y: "-5%",
+    width: "110%",
+    height: "110%"
+  }, /*#__PURE__*/React.createElement("feGaussianBlur", {
+    stdDeviation: "3.2"
+  })), /*#__PURE__*/React.createElement("linearGradient", {
+    id: "psc-cover",
+    x1: "0",
+    y1: "0",
+    x2: "1",
+    y2: "1"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "0",
+    stopColor: "#f3ead7"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "1",
+    stopColor: "#e2d4b8"
+  })), /*#__PURE__*/React.createElement("linearGradient", {
+    id: "psc-skin",
+    x1: "0",
+    y1: "0",
+    x2: "1",
+    y2: "1"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "0",
+    stopColor: "#e9b48f"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "1",
+    stopColor: "#cf9068"
+  })), /*#__PURE__*/React.createElement("radialGradient", {
+    id: "psc-vig",
+    cx: "50%",
+    cy: "45%",
+    r: "75%"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "55%",
+    stopColor: "#000",
+    stopOpacity: "0"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "100%",
+    stopColor: "#000",
+    stopOpacity: "0.5"
+  }))), /*#__PURE__*/React.createElement("g", {
+    filter: "url(#psc-dof)"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "-10",
+    y: "-10",
+    width: "390",
+    height: "294",
+    fill: "#2a1f18"
+  }), shelf(-14, 1), /*#__PURE__*/React.createElement("rect", {
+    x: "-10",
+    y: "76",
+    width: "390",
+    height: "9",
+    fill: "#5b4330"
+  }), shelf(86, 6), /*#__PURE__*/React.createElement("rect", {
+    x: "-10",
+    y: "176",
+    width: "390",
+    height: "9",
+    fill: "#5b4330"
+  }), shelf(186, 11), /*#__PURE__*/React.createElement("rect", {
+    x: "-10",
+    y: "-10",
+    width: "390",
+    height: "294",
+    fill: "#1a120c",
+    opacity: "0.28"
+  })), /*#__PURE__*/React.createElement("g", {
+    fill: "url(#psc-skin)"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "296",
+    y: "96",
+    width: "42",
+    height: "27",
+    rx: "13"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "298",
+    y: "128",
+    width: "44",
+    height: "27",
+    rx: "13"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "296",
+    y: "160",
+    width: "40",
+    height: "26",
+    rx: "13"
+  })), /*#__PURE__*/React.createElement("g", {
+    transform: "rotate(-4 185 137)"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "66",
+    y: "-40",
+    width: "246",
+    height: "330",
+    rx: "5",
+    fill: "#000",
+    opacity: "0.28",
+    transform: "translate(5 7)"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "60",
+    y: "-40",
+    width: "246",
+    height: "330",
+    rx: "5",
+    fill: "url(#psc-cover)"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "60",
+    y: "-40",
+    width: "9",
+    height: "330",
+    fill: "#b9a988",
+    opacity: "0.55"
+  }), /*#__PURE__*/React.createElement("g", {
+    fill: "#6b5f4c",
+    opacity: "0.5"
+  }, [0, 1, 2, 3].map(i => /*#__PURE__*/React.createElement("rect", {
+    key: i,
+    x: "88",
+    y: 60 + i * 9,
+    width: i === 3 ? 120 : 190,
+    height: "3.2",
+    rx: "1.6"
+  }))), /*#__PURE__*/React.createElement("rect", {
+    x: "118",
+    y: "103",
+    width: "134",
+    height: "68",
+    rx: "3",
+    fill: "#fff"
+  }), /*#__PURE__*/React.createElement("text", {
+    x: "185",
+    y: "116",
+    textAnchor: "middle",
+    fontFamily: "Helvetica, Arial, sans-serif",
+    fontSize: "8.5",
+    fontWeight: "600",
+    fill: "#1c1c1e",
+    letterSpacing: "0.3"
+  }, "ISBN ", code || '978-0-06-231609-7'), /*#__PURE__*/React.createElement("g", {
+    transform: `translate(${185 - bx / 2} 121)`,
+    fill: "#111"
+  }, bars), /*#__PURE__*/React.createElement("text", {
+    x: "185",
+    y: "166",
+    textAnchor: "middle",
+    fontFamily: "Helvetica, Arial, sans-serif",
+    fontSize: "7.5",
+    fill: "#1c1c1e",
+    letterSpacing: "2.2"
+  }, code || '9 780062 316097'), /*#__PURE__*/React.createElement("g", {
+    fill: "#6b5f4c",
+    opacity: "0.45"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "88",
+    y: "190",
+    width: "60",
+    height: "3",
+    rx: "1.5"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "88",
+    y: "198",
+    width: "42",
+    height: "3",
+    rx: "1.5"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "222",
+    y: "190",
+    width: "56",
+    height: "3",
+    rx: "1.5"
+  }))), /*#__PURE__*/React.createElement("g", {
+    transform: "rotate(28 78 230)"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "56",
+    y: "158",
+    width: "40",
+    height: "150",
+    rx: "20",
+    fill: "#000",
+    opacity: "0.18",
+    transform: "translate(4 5)"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "56",
+    y: "158",
+    width: "40",
+    height: "150",
+    rx: "20",
+    fill: "url(#psc-skin)"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "63",
+    y: "164",
+    width: "26",
+    height: "24",
+    rx: "11",
+    fill: "#f6d9c4",
+    opacity: "0.75"
+  })), /*#__PURE__*/React.createElement("rect", {
+    x: "-10",
+    y: "-10",
+    width: "390",
+    height: "294",
+    fill: "url(#psc-vig)"
+  })));
+}
 function PSCameraCard({
   asr,
   soldDays,
@@ -42249,7 +43028,8 @@ function PSCameraCard({
   code,
   src = 'cl',
   onPhase,
-  noFlash
+  noFlash,
+  blur = 0
 }) {
   const [run, setRun] = React.useState(0);
   const [ph, setPh] = React.useState({
@@ -42277,29 +43057,20 @@ function PSCameraCard({
   const fm = window.__bzTweaks && window.__bzTweaks.scanFound || 'frame';
   const camLoad = ph.k === 'load' && (window.__bzTweaks && window.__bzTweaks.scanLoad || 'spot') === 'spot';
   const lm = SEARCH_MODES[src] || SEARCH_MODES.cl;
+  let cs = window.__bzTweaks && window.__bzTweaks.camStats || 'bar'; // Bar is the default (also on the phone test, which has no Tweaks)
+  if (cs !== 'glass') cs = 'bar'; // 17 Nov 2026: two versions left — Original (glass) and Bar (default); Solid, White and Color were dropped
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'relative',
       height: '100%',
       borderRadius: 18,
       overflow: 'hidden',
-      background: 'linear-gradient(150deg,#43434b 0%,#26262b 55%,#17171b 100%)'
+      background: '#1d1612',
+      isolation: 'isolate'
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      inset: 0,
-      background: 'radial-gradient(120% 80% at 25% 20%, rgba(255,255,255,.10), rgba(255,255,255,0) 60%), radial-gradient(100% 70% at 80% 90%, rgba(0,0,0,.35), rgba(0,0,0,0) 60%)'
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: '38%',
-      background: 'linear-gradient(180deg,rgba(120,86,52,0),rgba(120,86,52,.42))'
-    }
+  }, /*#__PURE__*/React.createElement(PSCamScene, {
+    blur: blur,
+    code: code
   }), camLoad && /*#__PURE__*/React.createElement("div", {
     key: 'ld' + run,
     style: {
@@ -42350,39 +43121,85 @@ function PSCameraCard({
       letterSpacing: -0.2,
       color: '#fff'
     }
-  }, "Getting data")), !camLoad && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      top: 10,
-      left: 10,
-      right: noFlash ? 10 : 58,
-      zIndex: 5,
+  }, "Getting data")), !camLoad && /*#__PURE__*/React.createElement(React.Fragment, null, (() => {
+    const merged = cs !== 'glass'; // every version but the first: ASR and Sold days share one box; Profit stands on its own, as on the Pro Scan page
+    const cAsr = /*#__PURE__*/React.createElement(PSCamChip, {
+      kind: cs,
+      bare: merged,
+      color: PSC_STAT_COL.asr,
+      label: "ASR",
+      value: pscAsrNode(asr),
+      onTap: () => onStat('asr')
+    });
+    const cSold = /*#__PURE__*/React.createElement(PSCamChip, {
+      kind: cs,
+      bare: merged,
+      color: PSC_STAT_COL.soldDays,
+      label: "Sold Days",
+      value: soldDays != null ? /*#__PURE__*/React.createElement("span", null, soldDays, /*#__PURE__*/React.createElement("span", {
+        style: {
+          ...pscUnitFix,
+          marginLeft: 4
+        }
+      }, "/180")) : 'n/a',
+      onTap: () => onStat('soldDays')
+    });
+    const cProfit = /*#__PURE__*/React.createElement(PSCamChip, {
+      kind: cs,
+      bare: merged,
+      color: profit != null && profit < 0 ? PSC_STAT_COL.loss : PSC_STAT_COL.profit,
+      label: "Profit",
+      value: profit == null ? '–' : /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
+        style: {
+          ...pscUnitFix,
+          marginRight: 4
+        }
+      }, "$"), profit.toFixed(2)),
+      onTap: () => onStat('profit')
+    });
+    const wh = cs === 'white';
+    const box = {
       display: 'flex',
-      gap: 7
-    }
-  }, /*#__PURE__*/React.createElement(PSCamChip, {
-    label: "ASR",
-    value: pscAsrNode(asr),
-    onTap: () => onStat('asr')
-  }), /*#__PURE__*/React.createElement(PSCamChip, {
-    label: "Sold Days",
-    value: soldDays != null ? /*#__PURE__*/React.createElement("span", null, soldDays, /*#__PURE__*/React.createElement("span", {
+      borderRadius: 14,
+      ...(wh ? {
+        background: '#fff',
+        border: '1px solid rgba(0,0,0,0.06)',
+        boxShadow: '0 3px 12px rgba(0,0,0,0.28)'
+      } : {
+        background: 'rgba(12,12,15,0.9)',
+        border: '1px solid rgba(255,255,255,0.16)'
+      })
+    };
+    return /*#__PURE__*/React.createElement("div", {
       style: {
-        ...pscUnitFix,
-        marginLeft: 4
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        right: noFlash ? 10 : 58,
+        zIndex: 5,
+        display: 'flex',
+        gap: 7
       }
-    }, "/180")) : 'n/a',
-    onTap: () => onStat('soldDays')
-  }), /*#__PURE__*/React.createElement(PSCamChip, {
-    label: "Profit",
-    value: profit == null ? '–' : /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
+    }, merged ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       style: {
-        ...pscUnitFix,
-        marginRight: 4
+        ...box,
+        flex: 2,
+        minWidth: 0
       }
-    }, "$"), profit.toFixed(2)),
-    onTap: () => onStat('profit')
-  })), !noFlash && /*#__PURE__*/React.createElement("div", {
+    }, cAsr, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 1,
+        margin: '10px 0',
+        background: wh ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.16)'
+      }
+    }), cSold), /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...box,
+        flex: 1,
+        minWidth: 0
+      }
+    }, cProfit)) : /*#__PURE__*/React.createElement(React.Fragment, null, cAsr, cSold, cProfit));
+  })(), !noFlash && /*#__PURE__*/React.createElement("div", {
     onClick: onFlash,
     style: {
       position: 'absolute',
@@ -42427,7 +43244,14 @@ function PSCameraCard({
       pointerEvents: 'none'
     };
     const isb = mode === 'isbn';
-    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        opacity: 1 - blur
+      }
+    }, /*#__PURE__*/React.createElement("div", {
       key: 'ret' + run + (found ? 'f' : 's'),
       style: {
         ...rect,
@@ -43178,9 +44002,17 @@ function PSCamPage({
     top: 0,
     h: 0
   });
+  // Main app: the whole page scrolls (not only the area under the camera); once it moves, the camera blurs fully
+  const full = !!(v && v.main);
+  const [vh, setVh] = React.useState(0),
+    [camBlur, setCamBlur] = React.useState(0);
   const sync = React.useCallback(() => {
     const el = scRef.current;
     if (!el) return;
+    if (full) {
+      setVh(el.clientHeight);
+      setCamBlur(Math.max(0, Math.min(1, el.scrollTop / 70)));
+    }
     const max = el.scrollHeight - el.clientHeight;
     if (max <= 1) {
       setBar({
@@ -43201,8 +44033,10 @@ function PSCamPage({
     if (!inRef.current || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(sync);
     ro.observe(inRef.current);
+    if (scRef.current) ro.observe(scRef.current);
     return () => ro.disconnect();
   }, [sync, result]);
+  const zoneH = pct => full ? Math.round((vh || 874) * parseFloat(pct) / 100) : pct;
   const profitChannel = pfResolveChannel(profitPref, sel ? sel.id : null);
   const profit = result && sel ? pfCalc(sel.price, PS_BUY_DEFAULT)[profitChannel].profit : null;
   const order = {
@@ -43274,9 +44108,24 @@ function PSCamPage({
   return /*#__PURE__*/React.createElement("div", {
     style: root
   }, /*#__PURE__*/React.createElement("style", null, window.PSTV_CSS), /*#__PURE__*/React.createElement("style", null, '.psz-n700 .pstv-offers24 span[style*="font-size: 25px"]{font-weight:700 !important}'), /*#__PURE__*/React.createElement("div", {
+    ref: full ? scRef : null,
+    onScroll: full ? sync : undefined,
+    className: full ? 'psc-full' : undefined,
+    style: full ? {
+      ...bzProScanVars(),
+      ...bzGdShadowVars(),
+      position: 'absolute',
+      inset: 0,
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      WebkitOverflowScrolling: 'touch'
+    } : {
+      display: 'contents'
+    }
+  }, full && /*#__PURE__*/React.createElement("style", null, '.psc-full::-webkit-scrollbar{display:none}.psc-full{scrollbar-width:none}'), /*#__PURE__*/React.createElement("div", {
     style: {
       flexShrink: 0,
-      height: PS_CAM_TOP,
+      height: zoneH(PS_CAM_TOP),
       boxSizing: 'border-box',
       paddingTop: window.PSTV_PHONE ? 'max(10px, env(safe-area-inset-top))' : PS_CAM_SAFE,
       paddingBottom: 12,
@@ -43330,7 +44179,7 @@ function PSCamPage({
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       flexShrink: 0,
-      height: PS_CAM_H,
+      height: zoneH(PS_CAM_H),
       padding: '0 16px'
     }
   }, /*#__PURE__*/React.createElement(PSCameraCard, {
@@ -43339,6 +44188,7 @@ function PSCamPage({
     profit: profit,
     mode: mode,
     onMode: setMode,
+    blur: full ? camBlur : 0,
     flash: flash,
     onFlash: () => setFlash(f => !f),
     onStat: k => setStatSheet(k),
@@ -43368,8 +44218,10 @@ function PSCamPage({
     }
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      flex: 1,
-      minHeight: 0,
+      ...(full ? {} : {
+        flex: 1,
+        minHeight: 0
+      }),
       position: 'relative',
       transition: 'opacity .25s, filter .25s',
       ...(loading ? ld === 'blur' ? {
@@ -43386,9 +44238,9 @@ function PSCamPage({
       } : {})
     }
   }, /*#__PURE__*/React.createElement("div", {
-    ref: scRef,
-    onScroll: sync,
-    style: {
+    ref: full ? null : scRef,
+    onScroll: full ? undefined : sync,
+    style: full ? {} : {
       ...bzProScanVars(),
       ...bzGdShadowVars(),
       position: 'absolute',
@@ -43433,7 +44285,7 @@ function PSCamPage({
     tiles: TOPV.bb === 'inline',
     padTop: TOPV.bb === 'inline' ? 16 : 32,
     padBottom: 112
-  })))), V.hint === 'bar' && bar.h > 0 && /*#__PURE__*/React.createElement("div", {
+  })))), !full && V.hint === 'bar' && bar.h > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
       right: 5,
@@ -43444,7 +44296,7 @@ function PSCamPage({
       background: 'rgba(60,60,67,0.30)',
       pointerEvents: 'none'
     }
-  })), /*#__PURE__*/React.createElement("div", {
+  }))), /*#__PURE__*/React.createElement("div", {
     onClick: onClose,
     role: "button",
     "aria-label": "Back",
@@ -44466,6 +45318,1286 @@ Object.assign(window, {
   L9VerdictCard,
   L9StatsProductCard,
   L9Offers
+});;
+// not-found.jsx — what the Pro Scan page shows when a search or scan doesn't give a product.
+// Four states, two directions:
+//   kind:  'notfound' (no product for this ISBN/ASIN) · 'offline' (not in the Cloud / Local database → Live search)
+//          'nolisting' (Amazon has no listing, so no book info either) · 'invalid' (not a valid ISBN/ASIN)
+//   style: 'full' (B · one centred message with the next action) — the decided direction (17 Nov 2026)
+//          'page' (A · the page keeps its shape) — kept for the sketch only
+// Exports: PSNotFound, psNfResult, PSNF_KINDS
+
+const PSNF_INK = '#1C1C1E',
+  PSNF_GREY = '#8E8E93',
+  PSNF_ORANGE = '#C2410C',
+  PSNF_BLUE = '#0A64D8',
+  PSNF_PURPLE = '#7E2FB8';
+function psNfIcon(kind, size = 26, color = PSNF_GREY) {
+  const p = {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: color,
+    strokeWidth: 1.9,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round'
+  };
+  if (kind === 'offline') return /*#__PURE__*/React.createElement("svg", p, /*#__PURE__*/React.createElement("ellipse", {
+    cx: "12",
+    cy: "5.5",
+    rx: "7",
+    ry: "2.8"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M5 5.5v6.5c0 1.5 3.1 2.8 7 2.8"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M19 5.5v4"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "17",
+    cy: "17",
+    r: "3.6"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M19.6 19.6L22 22"
+  }));
+  if (kind === 'nolisting') return /*#__PURE__*/React.createElement("svg", p, /*#__PURE__*/React.createElement("path", {
+    d: "M4 9l1.5-5h13L20 9"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M4 9h16v2.5a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0V9z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M5.5 14v6h13v-6"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M10 15.5l4 3.5M14 15.5l-4 3.5"
+  }));
+  if (kind === 'invalid') return /*#__PURE__*/React.createElement("svg", p, /*#__PURE__*/React.createElement("path", {
+    d: "M4 6v12M7 6v12M10 6v8M13 6v12M16 6v6"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "18.5",
+    cy: "17",
+    r: "3.8"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M18.5 15.2v2.1"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "18.5",
+    cy: "19",
+    r: "0.5",
+    fill: color
+  }));
+  return /*#__PURE__*/React.createElement("svg", p, /*#__PURE__*/React.createElement("circle", {
+    cx: "10.5",
+    cy: "10.5",
+    r: "6.5"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M15.5 15.5L21 21"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M8.2 8.2l4.6 4.6M12.8 8.2l-4.6 4.6"
+  }));
+}
+function psNfDigits(q) {
+  return String(q || '').replace(/[^0-9Xx]/g, '').length;
+}
+// texts for each state; q = what was searched or scanned, mode = the search mode's name (Cloud / Local DB)
+const PSNF_KINDS = {
+  notfound: {
+    status: 'Not found',
+    title: () => 'No match on Amazon',
+    body: q => `We couldn't find a product for ${q}. Check the number, or search by title.`,
+    primary: 'Search by title',
+    secondary: 'Scan again',
+    links: true
+  },
+  offline: {
+    status: 'Not in offline data',
+    title: () => 'Not in the offline database',
+    body: () => 'Not in the offline database. Try Live search.',
+    // "the" database (ours, downloaded to the phone), never "your"; no number here (Searched for shows it)
+    points: [['no', 'Not found in local DB'], ['next', 'Try Live search']],
+    primary: 'Live search',
+    secondary: 'Edit search',
+    live: true,
+    tone: PSNF_PURPLE /* purple = the Local DB's own colour */,
+    noField: true
+  },
+  // Edit search: the search sheet opens with the number in it, selected
+  nolisting: {
+    tone: PSNF_BLUE,
+    status: 'No Amazon listing',
+    title: () => 'No Amazon listing',
+    body: () => 'This is a valid ISBN, but Amazon has no listing for it. Edit search or keep scanning.',
+    // usually the result of a Live search; the user must see the ISBN itself is fine
+    points: [['ok', 'Valid ISBN/EAN'], ['no', 'No Amazon listing for it']],
+    // a valid EAN (media) can land here too
+    primary: 'Scan next',
+    secondary: 'Search by title',
+    links: true
+  },
+  invalid: {
+    status: 'Invalid entry',
+    title: () => 'Invalid entry',
+    tone: PSNF_ORANGE,
+    body: () => "This isn't an ISBN, EAN or ASIN in Amazon's catalog. Edit search or keep scanning.",
+    // not about digit counts; never "unknown" / "not recognized" (reads as our software failing)
+    points: [['no', 'Not an ISBN, EAN or ASIN'], ['no', "No match in Amazon's catalog"]],
+    // two short points (decided 17 Nov 2026)
+    primary: 'Edit the number',
+    secondary: 'Scan again'
+  }
+};
+
+// a made-up "nothing found" item for the New item menu
+function psNfResult(kind) {
+  if (kind === 'invalid') {
+    const full = typeof psGenIsbn === 'function' ? psGenIsbn() : '9780000000000';
+    const len = [9, 11, 12][Math.floor(Math.random() * 3)]; // never 10 or 13 (those are valid lengths)
+    return {
+      nf: 'invalid',
+      query: full.slice(0, len)
+    };
+  }
+  return {
+    nf: kind,
+    query: typeof psGenIsbn === 'function' ? psGenIsbn() : '9780000000000'
+  };
+}
+function PSNfButtons({
+  k,
+  onPrimary,
+  onSecondary,
+  center
+}) {
+  const base = {
+    height: 48,
+    borderRadius: 14,
+    border: 'none',
+    cursor: 'pointer',
+    fontFamily: TOKENS.font,
+    fontSize: 16,
+    fontWeight: 650,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    WebkitTapHighlightColor: 'transparent'
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+      alignItems: 'stretch',
+      width: '100%'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "pstv-tap",
+    onClick: onPrimary,
+    style: {
+      ...base,
+      background: PSNF_INK,
+      color: '#fff'
+    }
+  }, k.live && typeof SMModeBadge === 'function' && /*#__PURE__*/React.createElement(SMModeBadge, {
+    mode: "lv"
+  }), k.primary), /*#__PURE__*/React.createElement("button", {
+    className: "pstv-tap",
+    onClick: onSecondary,
+    style: {
+      ...base,
+      background: center ? 'transparent' : 'rgba(118,118,128,0.12)',
+      color: center ? '#0A64D8' : PSNF_INK,
+      height: center ? 40 : 48
+    }
+  }, k.secondary));
+}
+
+// ── the "Searched for + Edit" row: ten looks to choose from (Not-found versions sketch, row "Edit row") ──
+// v 1 = the first merged row. One is picked, then applied to every state.
+function PSNfEditRow({
+  v = 1,
+  q,
+  tone,
+  onEdit
+}) {
+  const T = TOKENS,
+    mono = 'ui-monospace, "SF Mono", Menlo, monospace';
+  const lab = (c = '#8E8E93', extra) => /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontWeight: 800,
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+      color: c,
+      ...extra
+    }
+  }, "Searched for");
+  const num = (size = 17, c = T.text, extra) => /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: mono,
+      fontSize: size,
+      fontWeight: 600,
+      letterSpacing: 0.5,
+      color: c,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      ...extra
+    }
+  }, q);
+  const pencil = (c, s = 16) => /*#__PURE__*/React.createElement("svg", {
+    width: s,
+    height: s,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: c,
+    strokeWidth: "2.1",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M13.5 6.5l4 4"
+  }));
+  const glass = c => /*#__PURE__*/React.createElement("svg", {
+    width: "17",
+    height: "17",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: c,
+    strokeWidth: "2.2",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "11",
+    cy: "11",
+    r: "7"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M20 20l-3.5-3.5"
+  }));
+  const chev = c => /*#__PURE__*/React.createElement("svg", {
+    width: "8",
+    height: "13",
+    viewBox: "0 0 8 13",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M1 1l6 5.5L1 12",
+    stroke: c,
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }));
+  const B = {
+    border: 'none',
+    cursor: 'pointer',
+    fontFamily: T.font,
+    textAlign: 'left',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    boxSizing: 'border-box',
+    WebkitTapHighlightColor: 'transparent'
+  };
+  const col = (kids, extra) => /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2,
+      ...extra
+    }
+  }, kids);
+  const btn = (style, kids) => /*#__PURE__*/React.createElement("button", {
+    className: "pstv-tap",
+    onClick: onEdit,
+    style: {
+      ...B,
+      ...style
+    }
+  }, kids);
+  const GREY = 'rgba(118,118,128,0.12)',
+    BLUE = '#0A64D8';
+  switch (v) {
+    // 2 · search field: white, hairline, magnifier — looks like the search bar it opens
+    case 2:
+      return btn({
+        height: 52,
+        borderRadius: 14,
+        background: '#fff',
+        boxShadow: 'inset 0 0 0 1px rgba(60,60,67,0.18)',
+        padding: '0 8px 0 14px'
+      }, /*#__PURE__*/React.createElement(React.Fragment, null, glass('#8E8E93'), num(17, T.text, {
+        flex: 1
+      }), /*#__PURE__*/React.createElement("span", {
+        style: {
+          height: 34,
+          padding: '0 12px',
+          borderRadius: 10,
+          background: GREY,
+          display: 'inline-flex',
+          alignItems: 'center',
+          fontSize: 14.5,
+          fontWeight: 650,
+          color: T.text
+        }
+      }, "Edit")));
+    // 3 · outline with a round pencil button
+    case 3:
+      return btn({
+        minHeight: 58,
+        borderRadius: 16,
+        background: 'transparent',
+        boxShadow: 'inset 0 0 0 1.5px rgba(60,60,67,0.16)',
+        padding: '8px 10px 8px 14px'
+      }, /*#__PURE__*/React.createElement(React.Fragment, null, col(/*#__PURE__*/React.createElement(React.Fragment, null, lab(), num())), /*#__PURE__*/React.createElement("span", {
+        style: {
+          width: 38,
+          height: 38,
+          borderRadius: '50%',
+          background: GREY,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }
+      }, pencil(T.text))));
+    // 4 · split: information on the left, a dark Edit segment on the right
+    case 4:
+      return btn({
+        height: 56,
+        borderRadius: 14,
+        background: GREY,
+        padding: 0,
+        gap: 0,
+        overflow: 'hidden'
+      }, /*#__PURE__*/React.createElement(React.Fragment, null, col(/*#__PURE__*/React.createElement(React.Fragment, null, lab(), num()), {
+        padding: '0 14px'
+      }), /*#__PURE__*/React.createElement("span", {
+        style: {
+          alignSelf: 'stretch',
+          padding: '0 18px',
+          background: '#1C1C1E',
+          color: '#fff',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 7,
+          fontSize: 15.5,
+          fontWeight: 650
+        }
+      }, pencil('#fff', 15), "Edit")));
+    // 5 · one line: label and number side by side, a chevron
+    case 5:
+      return btn({
+        height: 48,
+        borderRadius: 14,
+        background: GREY,
+        padding: '0 14px'
+      }, /*#__PURE__*/React.createElement(React.Fragment, null, lab('#8E8E93', {
+        flexShrink: 0
+      }), num(16, T.text, {
+        flex: 1,
+        textAlign: 'right'
+      }), chev('#AEAEB2')));
+    // 6 · tinted with the state's colour
+    case 6:
+      return btn({
+        minHeight: 58,
+        borderRadius: 14,
+        background: tone + '14',
+        padding: '8px 14px'
+      }, /*#__PURE__*/React.createElement(React.Fragment, null, col(/*#__PURE__*/React.createElement(React.Fragment, null, lab(tone), num())), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 15.5,
+          fontWeight: 700,
+          color: tone,
+          flexShrink: 0
+        }
+      }, "Edit")));
+    // 7 · centred: the number large, "Edit search" under it
+    case 7:
+      return btn({
+        borderRadius: 16,
+        background: GREY,
+        padding: '12px 14px 11px',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 3,
+        textAlign: 'center'
+      }, /*#__PURE__*/React.createElement(React.Fragment, null, lab(), num(21, T.text, {
+        letterSpacing: 1
+      }), /*#__PURE__*/React.createElement("span", {
+        style: {
+          marginTop: 3,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          fontSize: 14,
+          fontWeight: 650,
+          color: BLUE
+        }
+      }, pencil(BLUE, 13), "Edit search")));
+    // 8 · text-field: no box, the number on a line, a pencil at the end
+    case 8:
+      return btn({
+        background: 'transparent',
+        padding: '2px 2px 9px',
+        borderRadius: 0,
+        boxShadow: 'inset 0 -1.5px 0 rgba(60,60,67,0.22)',
+        alignItems: 'flex-end'
+      }, /*#__PURE__*/React.createElement(React.Fragment, null, col(/*#__PURE__*/React.createElement(React.Fragment, null, lab('#AEAEB2'), num(20, T.text, {
+        letterSpacing: 0.8
+      }))), /*#__PURE__*/React.createElement("span", {
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          fontSize: 14.5,
+          fontWeight: 650,
+          color: BLUE,
+          paddingBottom: 2
+        }
+      }, pencil(BLUE, 14), "Edit")));
+    // 9 · dark: the row as the card's main button
+    case 9:
+      return btn({
+        minHeight: 58,
+        borderRadius: 14,
+        background: '#1C1C1E',
+        padding: '8px 8px 8px 14px'
+      }, /*#__PURE__*/React.createElement(React.Fragment, null, col(/*#__PURE__*/React.createElement(React.Fragment, null, lab('rgba(255,255,255,0.55)'), num(17, '#fff'))), /*#__PURE__*/React.createElement("span", {
+        style: {
+          height: 36,
+          padding: '0 14px',
+          borderRadius: 10,
+          background: 'rgba(255,255,255,0.16)',
+          color: '#fff',
+          display: 'inline-flex',
+          alignItems: 'center',
+          fontSize: 15,
+          fontWeight: 650,
+          flexShrink: 0
+        }
+      }, "Edit")));
+    // 10 · two pieces: the number as a white chip, a grey Edit button beside it
+    case 10:
+      return /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          gap: 8,
+          alignItems: 'stretch'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          flex: 1,
+          minWidth: 0,
+          borderRadius: 14,
+          background: '#fff',
+          boxShadow: '0 0 0 1px rgba(60,60,67,0.12), 0 1px 2px rgba(15,15,20,0.05)',
+          padding: '8px 12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2
+        }
+      }, lab(), num(16)), /*#__PURE__*/React.createElement("button", {
+        className: "pstv-tap",
+        onClick: onEdit,
+        style: {
+          ...B,
+          width: 'auto',
+          borderRadius: 14,
+          background: GREY,
+          padding: '0 16px',
+          gap: 7,
+          fontSize: 15.5,
+          fontWeight: 650,
+          color: T.text
+        }
+      }, pencil(T.text, 15), "Edit"));
+    // 1 · grey row, label over the number, blue Edit
+    default:
+      return btn({
+        minHeight: 58,
+        borderRadius: 14,
+        background: GREY,
+        padding: '8px 14px'
+      }, /*#__PURE__*/React.createElement(React.Fragment, null, col(/*#__PURE__*/React.createElement(React.Fragment, null, lab(), num())), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 15.5,
+          fontWeight: 650,
+          color: BLUE,
+          flexShrink: 0
+        }
+      }, "Edit")));
+  }
+}
+function PSNotFound({
+  nf,
+  style: styleIn = 'full',
+  modeName = 'Cloud',
+  onLive,
+  onSearch,
+  onScan,
+  onClose
+}) {
+  const [style, rowV] = String(styleIn).split(':'); // 'sheet5:3' = V5 with Edit row look 3
+  const T = TOKENS,
+    k = PSNF_KINDS[nf.nf] || PSNF_KINDS.notfound;
+  const q = nf.query || '';
+  const tone = k.tone || PSNF_GREY;
+  const primary = () => k.live ? onLive() : nf.nf === 'nolisting' ? onScan() : onSearch(nf.nf === 'invalid' ? q : undefined);
+  const secondary = () => nf.nf === 'offline' ? onSearch(q) : nf.nf === 'nolisting' ? onSearch() : onScan();
+  const art = (w, h) => /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: w,
+      height: h,
+      borderRadius: Math.round(w / 6),
+      background: '#ECECF0',
+      flexShrink: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, psNfIcon(nf.nf, Math.round(w * 0.38), tone));
+  const mono = {
+    fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+    fontSize: 13.5,
+    fontWeight: 600,
+    color: '#6C6C70',
+    letterSpacing: 0.3
+  };
+
+  // ── Alternatives (Not-found versions sketch) ──
+  // V1 · card: the picture up top, the message and buttons in a card near the thumb
+  if (style === 'card') return /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: '100%',
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
+      fontFamily: T.font,
+      padding: '0 16px 108px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 112,
+      height: 112,
+      borderRadius: '50%',
+      background: '#fff',
+      boxShadow: T.shadow,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, psNfIcon(nf.nf, 48, tone)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      color: tone
+    }
+  }, k.status)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#fff',
+      borderRadius: 24,
+      boxShadow: T.shadow,
+      padding: '20px 18px 16px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: T.fontDisplay,
+      fontSize: 21,
+      fontWeight: 700,
+      letterSpacing: -0.3,
+      lineHeight: 1.2,
+      color: T.text
+    }
+  }, k.title(nf)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6,
+      fontSize: 15,
+      lineHeight: 1.5,
+      color: '#6C6C70'
+    }
+  }, k.body(q, modeName)), /*#__PURE__*/React.createElement("div", {
+    onClick: () => onSearch(q),
+    className: "pstv-tap",
+    style: {
+      marginTop: 12,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '10px 12px',
+      borderRadius: 12,
+      background: 'rgba(118,118,128,0.10)',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...mono,
+      flex: 1
+    }
+  }, q), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 600,
+      color: '#0A64D8'
+    }
+  }, "Edit")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement(PSNfButtons, {
+    k: k,
+    onPrimary: primary,
+    onSecondary: secondary
+  }))));
+
+  // V4 · card overlay (V1 as an overlay): the previous result stays on the page behind a soft veil; the card sits near the thumb
+  // V5 = V4 with "Searched for" and "Edit search" merged into one row button
+  const merged = style === 'sheet5';
+  const v6 = style === 'sheet6'; // V6: the message as points, the search as a quiet tinted line, no Edit (the search bar below does that)
+  // Live search button (V6): half the card's width, right-aligned, blue (decided 17 Nov 2026; stays blue after the state's accent became purple), so it doesn't outweigh the message
+  const bare = v6 && rowV === 'c' && k.live; // sketch: no points, just the status and a centred "Try Live search"
+  const liveBtn = () => {
+    const bg = PSNF_BLUE;
+    if (bare) return /*#__PURE__*/React.createElement("div", {
+      style: {
+        margin: '30px 0 14px',
+        display: 'flex',
+        justifyContent: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "pstv-tap",
+      onClick: onLive,
+      style: {
+        minWidth: '58%',
+        height: 46,
+        padding: '0 22px',
+        borderRadius: 14,
+        border: 'none',
+        cursor: 'pointer',
+        fontFamily: T.font,
+        fontSize: 16,
+        fontWeight: 650,
+        background: bg,
+        color: '#fff',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7
+      }
+    }, "Try Live search", /*#__PURE__*/React.createElement("svg", {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "#fff",
+      strokeWidth: "2.6",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M5 12h14M13 6l6 6-6 6"
+    }))));
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 22,
+        display: 'flex',
+        justifyContent: 'flex-end'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "pstv-tap",
+      onClick: onLive,
+      style: {
+        width: '50%',
+        height: 44,
+        borderRadius: 13,
+        border: 'none',
+        cursor: 'pointer',
+        fontFamily: T.font,
+        fontSize: 15.5,
+        fontWeight: 650,
+        background: bg,
+        color: '#fff',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7
+      }
+    }, "Live search", /*#__PURE__*/React.createElement("svg", {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "#fff",
+      strokeWidth: "2.6",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M5 12h14M13 6l6 6-6 6"
+    }))));
+  };
+  // ── Not in offline data (decided 17 Nov 2026: C4): the status line, and under it only the action as a row — nothing said twice ──
+  if (v6 && k.live) {
+    const X = onClose && /*#__PURE__*/React.createElement("button", {
+      onClick: onClose,
+      "aria-label": "Close",
+      style: {
+        width: 32,
+        height: 32,
+        borderRadius: '50%',
+        border: 'none',
+        background: 'rgba(118,118,128,0.12)',
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
+      }
+    }, /*#__PURE__*/React.createElement("svg", {
+      width: "12",
+      height: "12",
+      viewBox: "0 0 14 14",
+      fill: "none",
+      stroke: "#6C6C70",
+      strokeWidth: "2.2",
+      strokeLinecap: "round"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M2 2l10 10M12 2L2 12"
+    })));
+    const tile = sz => /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: sz,
+        height: sz,
+        borderRadius: sz * 0.32,
+        background: tone + '1A',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
+      }
+    }, psNfIcon(nf.nf, sz * 0.5, tone));
+    // the action as a soft green row (Live search's own colour), content centred: the words, then a filled arrow — the whole row is the button
+    const actionRow = /*#__PURE__*/React.createElement("button", {
+      className: "pstv-tap",
+      onClick: onLive,
+      style: {
+        width: '100%',
+        minHeight: 54,
+        borderRadius: 16,
+        border: 'none',
+        cursor: 'pointer',
+        fontFamily: T.font,
+        background: 'rgba(27,158,81,0.12)',
+        padding: '0 14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 17,
+        fontWeight: 650,
+        color: '#157A3F'
+      }
+    }, "Try Live search"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 26,
+        height: 26,
+        borderRadius: '50%',
+        background: '#1B9E51',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
+      }
+    }, /*#__PURE__*/React.createElement("svg", {
+      width: "13",
+      height: "13",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "#fff",
+      strokeWidth: "2.8",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M5 12h14M13 6l6 6-6 6"
+    }))));
+    const inner = /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '18px 18px 16px'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12
+      }
+    }, tile(44), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        fontSize: 12.5,
+        fontWeight: 700,
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+        color: tone
+      }
+    }, k.status), X), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 18
+      }
+    }, actionRow));
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'absolute',
+        inset: 0,
+        zIndex: 30,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-end',
+        padding: '0 16px 104px',
+        fontFamily: T.font
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      onClick: onClose,
+      style: {
+        position: 'absolute',
+        inset: 0,
+        background: 'rgba(242,242,247,0.84)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'relative',
+        background: '#fff',
+        borderRadius: 28,
+        boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 16px 44px rgba(15,15,20,0.16)'
+      }
+    }, inner));
+  }
+  if (style === 'sheet' || merged || v6) return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      zIndex: 30,
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'flex-end',
+      padding: '0 16px 104px',
+      fontFamily: T.font
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: onClose,
+    style: {
+      position: 'absolute',
+      inset: 0,
+      background: 'rgba(242,242,247,0.84)',
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      background: '#fff',
+      borderRadius: 28,
+      boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 16px 44px rgba(15,15,20,0.16)',
+      padding: '18px 18px 16px',
+      animation: 'psnf-up .32s cubic-bezier(.32,.72,0,1)'
+    }
+  }, /*#__PURE__*/React.createElement("style", null, '@keyframes psnf-up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      background: k.tone ? k.tone + '1A' : 'rgba(118,118,128,0.12)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0
+    }
+  }, psNfIcon(nf.nf, 22, tone)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 12.5,
+      fontWeight: 700,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      color: tone
+    }
+  }, k.status), onClose && /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    "aria-label": "Close",
+    style: {
+      width: 32,
+      height: 32,
+      borderRadius: '50%',
+      border: 'none',
+      background: 'rgba(118,118,128,0.12)',
+      cursor: 'pointer',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "12",
+    height: "12",
+    viewBox: "0 0 14 14",
+    fill: "none",
+    stroke: "#6C6C70",
+    strokeWidth: "2.2",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M2 2l10 10M12 2L2 12"
+  })))), v6 ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      margin: '24px 2px 0',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16
+    }
+  }, (bare ? [] : k.points || []).map(([kind, text]) => /*#__PURE__*/React.createElement("div", {
+    key: text,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 13
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 28,
+      height: 28,
+      borderRadius: '50%',
+      flexShrink: 0,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: kind === 'no' ? tone + '1A' : 'rgba(22,163,74,0.12)' /* ✕ in the state's colour; ✓ and → green */
+    }
+  }, kind === 'ok' ? /*#__PURE__*/React.createElement("svg", {
+    width: "12",
+    height: "12",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#16A34A",
+    strokeWidth: "3.2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M5 12.5l4.5 4.5L19 7"
+  })) : kind === 'no' ? /*#__PURE__*/React.createElement("svg", {
+    width: "10",
+    height: "10",
+    viewBox: "0 0 14 14",
+    fill: "none",
+    stroke: tone,
+    strokeWidth: "2.6",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M2 2l10 10M12 2L2 12"
+  })) : /*#__PURE__*/React.createElement("svg", {
+    width: "12",
+    height: "12",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#16A34A",
+    strokeWidth: "2.8",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M5 12h14M13 6l6 6-6 6"
+  }))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 17,
+      lineHeight: 1.3,
+      fontWeight: 600,
+      color: T.text
+    }
+  }, text)))), k.live ? liveBtn() : /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 8
+    }
+  })) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14,
+      fontSize: 15.5,
+      lineHeight: 1.5,
+      color: '#3A3A3C'
+    }
+  }, k.body(q, modeName)), merged ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8
+    }
+  }, k.live && /*#__PURE__*/React.createElement("button", {
+    className: "pstv-tap",
+    onClick: onLive,
+    style: {
+      height: 48,
+      borderRadius: 14,
+      border: 'none',
+      cursor: 'pointer',
+      fontFamily: T.font,
+      fontSize: 16,
+      fontWeight: 650,
+      background: PSNF_INK,
+      color: '#fff',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8
+    }
+  }, typeof SMModeBadge === 'function' && /*#__PURE__*/React.createElement(SMModeBadge, {
+    mode: "lv"
+  }), "Live search"), /*#__PURE__*/React.createElement(PSNfEditRow, {
+    v: parseInt(rowV, 10) || 1,
+    q: q,
+    tone: tone,
+    onEdit: () => onSearch(q)
+  })) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      fontWeight: 800,
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+      color: '#AEAEB2'
+    }
+  }, "Searched for"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4,
+      fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+      fontSize: 19,
+      fontWeight: 600,
+      letterSpacing: 0.6,
+      color: T.text,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    }
+  }, q)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8
+    }
+  }, k.live && /*#__PURE__*/React.createElement("button", {
+    className: "pstv-tap",
+    onClick: onLive,
+    style: {
+      height: 48,
+      borderRadius: 14,
+      border: 'none',
+      cursor: 'pointer',
+      fontFamily: T.font,
+      fontSize: 16,
+      fontWeight: 650,
+      background: PSNF_INK,
+      color: '#fff',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8
+    }
+  }, typeof SMModeBadge === 'function' && /*#__PURE__*/React.createElement(SMModeBadge, {
+    mode: "lv"
+  }), "Live search"), /*#__PURE__*/React.createElement("button", {
+    className: "pstv-tap",
+    onClick: () => onSearch(q),
+    style: {
+      height: 48,
+      borderRadius: 14,
+      border: 'none',
+      cursor: 'pointer',
+      fontFamily: T.font,
+      fontSize: 16,
+      fontWeight: 650,
+      background: 'rgba(118,118,128,0.12)',
+      color: PSNF_INK
+    }
+  }, "Edit search"))))));
+  if (style === 'full') return /*#__PURE__*/React.createElement("div", {
+    style: {
+      minHeight: 'calc(100% - 0px)',
+      height: '100%',
+      boxSizing: 'border-box',
+      padding: '0 28px 150px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center',
+      fontFamily: T.font
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 76,
+      height: 76,
+      borderRadius: '50%',
+      background: 'rgba(118,118,128,0.12)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, psNfIcon(nf.nf, 34, tone)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 22,
+      fontSize: 12,
+      fontWeight: 700,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      color: tone
+    }
+  }, k.status), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6,
+      fontFamily: T.fontDisplay,
+      fontSize: 23,
+      fontWeight: 700,
+      letterSpacing: -0.4,
+      lineHeight: 1.2,
+      color: T.text,
+      maxWidth: 320
+    }
+  }, k.title(nf)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      fontSize: 15,
+      lineHeight: 1.5,
+      color: '#6C6C70',
+      maxWidth: 310
+    }
+  }, k.body(q, modeName)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10,
+      ...mono,
+      padding: '5px 10px',
+      borderRadius: 8,
+      background: 'rgba(118,118,128,0.10)'
+    }
+  }, q), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 26,
+      width: '100%',
+      maxWidth: 320
+    }
+  }, /*#__PURE__*/React.createElement(PSNfButtons, {
+    k: k,
+    onPrimary: primary,
+    onSecondary: secondary,
+    center: true
+  })));
+
+  // A · the page keeps its shape
+  const card = {
+    background: '#fff',
+    borderRadius: 24,
+    boxShadow: T.shadow
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: T.font,
+      minHeight: '100%',
+      display: 'flex',
+      flexDirection: 'column'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '64px 16px 24px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 18,
+      alignItems: 'center',
+      padding: '10px 8px'
+    }
+  }, art(62, 88), /*#__PURE__*/React.createElement("div", {
+    style: {
+      minWidth: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 5
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+      color: tone
+    }
+  }, k.status), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: T.fontDisplay,
+      fontSize: 19,
+      fontWeight: 700,
+      letterSpacing: -0.3,
+      color: T.text,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    }
+  }, k.title(nf)), /*#__PURE__*/React.createElement("span", {
+    style: mono
+  }, q))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...card,
+      marginTop: 14,
+      padding: '18px 18px 16px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      lineHeight: 1.5,
+      color: '#3A3A3C'
+    }
+  }, k.body(q, modeName)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16
+    }
+  }, /*#__PURE__*/React.createElement(PSNfButtons, {
+    k: k,
+    onPrimary: primary,
+    onSecondary: secondary
+  })))), k.links && typeof PSExternal === 'function' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      background: typeof PS_WARM !== 'undefined' ? PS_WARM : '#F3EFE8',
+      padding: '26px 0 140px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 14
+    }
+  }, typeof pszChapter === 'function' ? pszChapter('Elsewhere', 'Look it up') : null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '0 16px'
+    }
+  }, /*#__PURE__*/React.createElement(PSExternal, null))));
+}
+Object.assign(window, {
+  PSNotFound,
+  psNfResult,
+  PSNF_KINDS
 });;
 // offers-rail.jsx — production offers table (approved variant 13A).
 //
@@ -45813,1781 +47945,6 @@ function SearchSheet({
 Object.assign(window, {
   SearchSheet
 });;
-// scan-session-subpages.jsx — full-screen scan session pages launched by
-// the big Scan button on the Scanner tab.  Which page opens depends on the
-// segmented mode (Legacy vs Pro).  Both slide in from the right with just a
-// floating back button — no header.
-//
-//   • LegacyScanSubpage — the Legacy scanner already ships in the current
-//     app and is NOT being redesigned.  Placeholder for the developer.
-//   • ProScanSubpage    — intentionally EMPTY for now; the Pro scanning
-//     experience gets built here next.
-//
-// Relies on: TOKENS (components.jsx); FloatingBackButton (scans-device-subpage.jsx).
-
-function ScanSessionShell({
-  open,
-  zIndex = 42,
-  children
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      inset: 0,
-      zIndex,
-      background: TOKENS.bg,
-      transform: open ? 'translateX(0)' : 'translateX(100%)',
-      transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
-      overflow: 'hidden',
-      fontFamily: TOKENS.font,
-      color: TOKENS.text,
-      display: 'flex',
-      flexDirection: 'column'
-    }
-  }, children);
-}
-
-// ─── Legacy — placeholder (already implemented) ────────────────────
-function LegacyScanSubpage({
-  open,
-  onClose
-}) {
-  return /*#__PURE__*/React.createElement(ScanSessionShell, {
-    open: open
-  }, /*#__PURE__*/React.createElement(FloatingBackButton, {
-    onClick: onClose,
-    top: 56
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minHeight: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      textAlign: 'center',
-      padding: '90px 32px 40px'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 76,
-      height: 76,
-      borderRadius: '50%',
-      background: 'rgba(60,60,67,0.08)',
-      color: TOKENS.textSecondary,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "34",
-    height: "34",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "1.9",
-    strokeLinecap: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M3 5v14M7 5v14M11 5v14M15.5 5v14M19 5v14"
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 20,
-      fontFamily: TOKENS.fontDisplay,
-      fontSize: 24,
-      fontWeight: 700,
-      letterSpacing: -0.5,
-      color: TOKENS.text
-    }
-  }, "Legacy Scanner"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 10,
-      fontSize: 14.5,
-      color: TOKENS.textSecondary,
-      fontWeight: 500,
-      letterSpacing: -0.1,
-      lineHeight: 1.5,
-      maxWidth: 286
-    }
-  }, "No redesign needed here. The existing Legacy scanner ships unchanged \u2014 the developer keeps the current implementation."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 26,
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: '9px 14px',
-      borderRadius: 999,
-      background: 'rgba(60,60,67,0.06)',
-      border: `1px solid ${TOKENS.border}`
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: 8,
-      height: 8,
-      borderRadius: '50%',
-      background: '#16A34A',
-      flexShrink: 0
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 12.5,
-      fontWeight: 600,
-      letterSpacing: -0.05,
-      color: TOKENS.textSecondary
-    }
-  }, "Already implemented"))));
-}
-
-// ─── Pro — the real Pro Scan page (Round-2 Approach A) ─────────────
-function ProScanSubpage({
-  open,
-  onClose
-}) {
-  return /*#__PURE__*/React.createElement(ScanSessionShell, {
-    open: open
-  }, ProScanPage ? /*#__PURE__*/React.createElement(ProScanPage, {
-    onClose: onClose
-  }) : null);
-}
-Object.assign(window, {
-  LegacyScanSubpage,
-  ProScanSubpage
-});;
-// more-screen.jsx — More tab + Account subpage + Chat (Support) subpage.
-//
-// Single file because they share state — particularly the unread-message
-// count for Chat, which has to propagate back to the "Chat with Us" row
-// in the More list.
-//
-// Layout decisions for this first iteration:
-//   • More main page:
-//       - LargeTitle "More" + subtitle "Account, services & more"
-//       - Account summary HERO card (squircle avatar with initials + soft
-//         gradient + small verified check badge; email and device next
-//         to it; chevron). Tapping opens the Account subpage.
-//       - "Apps & services" CardGroup: Seller News Hub, FBA Fee Monitor,
-//         Application 3.  Each row leads with a colored icon tile to
-//         match the visual pattern of the Scan screen's config rows.
-//       - "Support" CardGroup: a single Chat-with-Us row with a numeric
-//         unread badge when present.
-//   • Account subpage:
-//       - Header with back chevron + title.
-//       - Identity block (big squircle avatar centered, email below,
-//         small "Verified seller" caption).
-//       - "Profile & device" CardGroup: Email (read-only), Device name
-//         (drillable), App version (drillable).
-//       - "Sign out" as a separate single-row CardGroup, danger styled.
-//   • Chat subpage:
-//       - Header with back chevron + "Bookzy Support" title and an
-//         online dot.
-//       - Message stream (mock messages) with grouped consecutive bubbles
-//         and timestamps.
-//       - Quick-action chips when the user hasn't typed yet.
-//       - Typing indicator dots when support is composing.
-//       - Composer with a send button that's disabled on empty input.
-//
-// Subpages render as full-screen slide-in overlays within MoreScreenV2
-// (not lifted into app.jsx) so all More navigation state stays local.
-
-const MORE_USER = {
-  email: 'claire@bookzy.example.com',
-  initials: 'CW',
-  // Claire Whitfield
-  device: 'iPhone 15 Pro',
-  appVersion: '2.4.1'
-};
-
-// Avatar gradient — soft, warm, derived from the squircle aesthetic we
-// established on order rows.  Channel-tinted "warm cream" feel.
-const MORE_AVATAR_GRADIENT = 'linear-gradient(135deg, oklch(0.78 0.10 50) 0%, oklch(0.62 0.14 25) 100%)';
-
-// ─────────────────────────────── icons ───────────────────────────────
-function MoreIconNews({
-  size = 20,
-  color = 'currentColor'
-}) {
-  return /*#__PURE__*/React.createElement("svg", {
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: color,
-    strokeWidth: "1.7",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M4 5h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5z"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M19 8h2v10a2 2 0 0 1-2 2"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M8 9h7M8 13h7M8 17h4"
-  }));
-}
-function MoreIconFee({
-  size = 20,
-  color = 'currentColor'
-}) {
-  return /*#__PURE__*/React.createElement("svg", {
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: color,
-    strokeWidth: "1.7",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M12 3v18"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M16.5 7H10a2.5 2.5 0 0 0 0 5h4a2.5 2.5 0 0 1 0 5H7.5"
-  }));
-}
-function MoreIconApp({
-  size = 20,
-  color = 'currentColor'
-}) {
-  return /*#__PURE__*/React.createElement("svg", {
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: color,
-    strokeWidth: "1.7",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("rect", {
-    x: "3.5",
-    y: "3.5",
-    width: "7",
-    height: "7",
-    rx: "1.5"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "13.5",
-    y: "3.5",
-    width: "7",
-    height: "7",
-    rx: "1.5"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "3.5",
-    y: "13.5",
-    width: "7",
-    height: "7",
-    rx: "1.5"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "13.5",
-    y: "13.5",
-    width: "7",
-    height: "7",
-    rx: "1.5"
-  }));
-}
-function MoreIconAccount({
-  size = 20,
-  color = 'currentColor'
-}) {
-  return /*#__PURE__*/React.createElement("svg", {
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: color,
-    strokeWidth: "1.7",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    "aria-hidden": "true"
-  }, /*#__PURE__*/React.createElement("circle", {
-    cx: "12",
-    cy: "8.5",
-    r: "3.75"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M4.5 20c.9-3.6 3.9-5.75 7.5-5.75s6.6 2.15 7.5 5.75"
-  }));
-}
-function MoreIconChat({
-  size = 20,
-  color = 'currentColor'
-}) {
-  return /*#__PURE__*/React.createElement("svg", {
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: color,
-    strokeWidth: "1.7",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"
-  }));
-}
-function MoreIconChevron({
-  size = 13,
-  color = TOKENS.textTertiary
-}) {
-  return /*#__PURE__*/React.createElement("svg", {
-    width: size,
-    height: size,
-    viewBox: "0 0 8 13",
-    fill: "none"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M1 1l6 5.5L1 12",
-    stroke: color,
-    strokeWidth: "1.8",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }));
-}
-function MoreIconBack({
-  size = 22,
-  color = TOKENS.text
-}) {
-  return /*#__PURE__*/React.createElement("svg", {
-    width: size,
-    height: size,
-    viewBox: "0 0 22 22",
-    fill: "none"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M14 4l-7 7 7 7",
-    stroke: color,
-    strokeWidth: "1.9",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }));
-}
-function MoreIconCheck({
-  size = 11,
-  color = '#FFFFFF'
-}) {
-  return /*#__PURE__*/React.createElement("svg", {
-    width: size,
-    height: size,
-    viewBox: "0 0 11 11",
-    fill: "none"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M2 5.5l2.5 2.5L9 3.5",
-    stroke: color,
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }));
-}
-function MoreIconSend({
-  size = 18,
-  color = '#FFFFFF'
-}) {
-  return /*#__PURE__*/React.createElement("svg", {
-    width: size,
-    height: size,
-    viewBox: "0 0 18 18",
-    fill: "none"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M3 15L15 9 3 3l1.5 6L11 9l-6.5 0L3 15z",
-    fill: color
-  }));
-}
-
-// ─────────────────────────── avatar primitive ───────────────────────
-//   • Squircle (matches order-row aesthetic).
-//   • Soft warm gradient + initials.
-//   • Optional verified check badge in the bottom-right corner.
-function MoreAvatar({
-  size = 56,
-  initials = 'CW',
-  verified = false
-}) {
-  const radius = Math.round(size / 3);
-  const badge = Math.max(14, Math.round(size * 0.32));
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      width: size,
-      height: size,
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: size,
-      height: size,
-      borderRadius: radius,
-      background: MORE_AVATAR_GRADIENT,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: '#FFFFFF',
-      fontFamily: TOKENS.fontDisplay,
-      fontWeight: 700,
-      fontSize: Math.round(size * 0.42),
-      letterSpacing: -0.6,
-      boxShadow: '0 1px 2px rgba(15,15,20,0.10), 0 6px 14px rgba(15,15,20,0.10)'
-    }
-  }, initials), verified && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      right: -2,
-      bottom: -2,
-      width: badge,
-      height: badge,
-      borderRadius: 999,
-      background: TOKENS.success,
-      border: `2px solid ${TOKENS.surface}`,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, /*#__PURE__*/React.createElement(MoreIconCheck, {
-    size: Math.round(badge * 0.55)
-  })));
-}
-
-// ─────────────────────────────── More main ──────────────────────────
-function MoreScreenV2({
-  onOverlay,
-  initialPage = null
-}) {
-  const [openPage, setOpenPage] = React.useState(initialPage); // 'account' | 'chat' | 'news' | 'fees' | null
-  const [unread, setUnread] = React.useState(2); // unread support messages
-  // Device name is editable (Account → Device name subpage); lifted here
-  // so both the summary card and the account page reflect edits.
-  const [deviceName, setDeviceName] = React.useState(MORE_USER.device);
-  const user = {
-    ...MORE_USER,
-    device: deviceName
-  };
-  // Hide the host tab bar whenever a More subpage (Account / Chat) is open,
-  // so these match every other subpage in the app.
-  React.useEffect(() => {
-    onOverlay && onOverlay(openPage !== null);
-  }, [openPage]);
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      width: '100%',
-      height: '100%',
-      background: TOKENS.bg,
-      color: TOKENS.text,
-      fontFamily: TOKENS.font,
-      WebkitFontSmoothing: 'antialiased',
-      overflow: 'hidden'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      inset: 0,
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      paddingTop: 56,
-      paddingBottom: 130
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '6px 24px 14px'
-    }
-  }, /*#__PURE__*/React.createElement("h1", {
-    style: {
-      margin: 0,
-      fontFamily: TOKENS.fontDisplay,
-      fontSize: 34,
-      lineHeight: '40px',
-      fontWeight: 700,
-      letterSpacing: -0.8,
-      color: TOKENS.text
-    }
-  }, "More")), /*#__PURE__*/React.createElement(MoreSectionLabel, null, "Account"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '0 16px'
-    }
-  }, /*#__PURE__*/React.createElement(CardGroup, null, /*#__PURE__*/React.createElement(MoreLinkRow, {
-    iconBg: "rgba(3,2,19,0.08)",
-    iconColor: TOKENS.text,
-    glyph: /*#__PURE__*/React.createElement(MoreIconAccount, null),
-    title: user.email,
-    subtitle: user.device,
-    onClick: () => setOpenPage('account')
-  }))), /*#__PURE__*/React.createElement(MoreSectionLabel, {
-    top: 32
-  }, "Support"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '0 16px'
-    }
-  }, /*#__PURE__*/React.createElement(CardGroup, null, /*#__PURE__*/React.createElement(MoreLinkRow, {
-    iconBg: "rgba(3,2,19,0.08)",
-    iconColor: TOKENS.text,
-    glyph: /*#__PURE__*/React.createElement(MoreIconChat, null),
-    title: "Chat with Us",
-    subtitle: "Talk to our support team",
-    onClick: () => setOpenPage('chat')
-  }))), /*#__PURE__*/React.createElement(MoreSectionLabel, {
-    top: 32
-  }, "Other apps and services"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '0 16px'
-    }
-  }, /*#__PURE__*/React.createElement(CardGroup, null, /*#__PURE__*/React.createElement(MoreLinkRow, {
-    iconBg: "rgba(10,132,255,0.14)",
-    iconColor: "#0064D1",
-    glyph: /*#__PURE__*/React.createElement(MoreIconNews, null),
-    title: "Seller News Hub",
-    subtitle: "Industry updates & marketplace tips",
-    onClick: () => setOpenPage('news')
-  }), /*#__PURE__*/React.createElement(MoreLinkRow, {
-    iconBg: "rgba(52,199,89,0.16)",
-    iconColor: "#1A7F3F",
-    glyph: /*#__PURE__*/React.createElement(MoreIconFee, null),
-    title: "FBA Fee Monitor",
-    subtitle: "Track fee changes across your catalog",
-    onClick: () => setOpenPage('fees')
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 24
-    }
-  })), /*#__PURE__*/React.createElement(SubpageOverlay, {
-    open: openPage === 'account'
-  }, /*#__PURE__*/React.createElement(AccountPage, {
-    user: user,
-    onChangeDevice: setDeviceName,
-    onBack: () => setOpenPage(null)
-  })), /*#__PURE__*/React.createElement(SubpageOverlay, {
-    open: openPage === 'chat'
-  }, /*#__PURE__*/React.createElement(ComingSoonPage, {
-    title: "Chat with Us",
-    iconBg: "rgba(3,2,19,0.08)",
-    iconColor: TOKENS.text,
-    glyph: /*#__PURE__*/React.createElement(MoreIconChat, {
-      size: 34
-    }),
-    blurb: "Get help from our team, right in the app.",
-    items: ['Live chat with our support team', 'Help with scans, listings and more'],
-    action: /*#__PURE__*/React.createElement(WhatsAppSupportCard, null),
-    onBack: () => setOpenPage(null)
-  })), /*#__PURE__*/React.createElement(SubpageOverlay, {
-    open: openPage === 'news'
-  }, /*#__PURE__*/React.createElement(ComingSoonPage, {
-    title: "Seller News Hub",
-    iconBg: "rgba(10,132,255,0.14)",
-    iconColor: "#0064D1",
-    glyph: /*#__PURE__*/React.createElement(MoreIconNews, {
-      size: 34
-    }),
-    blurb: "News and know-how for booksellers.",
-    items: ['Bookz Pro announcements', 'Amazon policy updates', 'Book sales near you', 'Bookselling tips and tricks'],
-    onBack: () => setOpenPage(null)
-  })), /*#__PURE__*/React.createElement(SubpageOverlay, {
-    open: openPage === 'fees'
-  }, /*#__PURE__*/React.createElement(ComingSoonPage, {
-    title: "FBA Fee Monitor",
-    iconBg: "rgba(52,199,89,0.16)",
-    iconColor: "#1A7F3F",
-    glyph: /*#__PURE__*/React.createElement(MoreIconFee, {
-      size: 34
-    }),
-    blurb: "Keep an eye on FBA fees.",
-    items: ['Alerts before a SKU\'s fees go up', 'Set min/max prices', 'Create removals'],
-    onBack: () => setOpenPage(null)
-  })));
-}
-
-// ───────────────────────── WhatsApp support card ─────────────────────
-// Interim support route while in-app chat is coming soon: opens the
-// Bookz Pro Support WhatsApp Business line.
-const SUPPORT_WHATSAPP = {
-  display: '+90 544 174 13 94',
-  url: 'https://wa.me/905441741394'
-};
-
-// Phone number with a copy button — shows a check + "Copied" briefly.
-function WhatsAppNumberRow() {
-  const [copied, setCopied] = React.useState(false);
-  const copy = () => {
-    const text = SUPPORT_WHATSAPP.display;
-    const done = () => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    };
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done, done);
-        return;
-      }
-    } catch (e) {}
-    done();
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 2
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 14,
-      fontWeight: 500,
-      color: TOKENS.textSecondary,
-      letterSpacing: -0.05,
-      fontVariantNumeric: 'tabular-nums'
-    }
-  }, SUPPORT_WHATSAPP.display), /*#__PURE__*/React.createElement("button", {
-    onClick: copy,
-    "aria-label": copied ? 'Copied' : 'Copy phone number',
-    style: {
-      width: 36,
-      height: 36,
-      padding: 0,
-      border: 'none',
-      background: 'none',
-      cursor: 'pointer',
-      color: copied ? TOKENS.success : TOKENS.textSecondary,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, copied ? /*#__PURE__*/React.createElement("svg", {
-    width: "16",
-    height: "16",
-    viewBox: "0 0 14 14",
-    fill: "none",
-    "aria-hidden": "true"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M2.5 7.5l3 3 6-7",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  })) : /*#__PURE__*/React.createElement("svg", {
-    width: "16",
-    height: "16",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "1.8",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    "aria-hidden": "true"
-  }, /*#__PURE__*/React.createElement("rect", {
-    x: "8.5",
-    y: "8.5",
-    width: "12",
-    height: "12",
-    rx: "2.5"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"
-  }))));
-}
-function WhatsAppSupportCard() {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '12px 16px 0',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'stretch',
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: 'center',
-      fontSize: 15,
-      fontWeight: 600,
-      color: TOKENS.text,
-      letterSpacing: -0.2
-    }
-  }, "Need help now?"), /*#__PURE__*/React.createElement("a", {
-    href: SUPPORT_WHATSAPP.url,
-    target: "_blank",
-    rel: "noopener noreferrer",
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      height: 48,
-      borderRadius: 14,
-      textDecoration: 'none',
-      background: '#25D366',
-      color: '#FFFFFF',
-      fontFamily: TOKENS.font,
-      fontSize: 16,
-      fontWeight: 600,
-      letterSpacing: -0.2
-    }
-  }, /*#__PURE__*/React.createElement(MoreIconChat, {
-    size: 18,
-    color: "#FFFFFF"
-  }), "Chat on WhatsApp"), /*#__PURE__*/React.createElement(WhatsAppNumberRow, null));
-}
-
-// ─────────────────────────── Coming soon page ────────────────────────
-// Shared placeholder for Apps & services entries that aren't built yet:
-// icon, "Coming soon" pill, one-line pitch, and what's included.
-function ComingSoonPage({
-  title,
-  iconBg,
-  iconColor,
-  glyph,
-  blurb,
-  items = [],
-  action = null,
-  onBack
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      width: '100%',
-      height: '100%',
-      background: TOKENS.bg,
-      color: TOKENS.text,
-      fontFamily: TOKENS.font,
-      WebkitFontSmoothing: 'antialiased',
-      overflow: 'hidden'
-    }
-  }, /*#__PURE__*/React.createElement(FloatingBackButton, {
-    onClick: onBack,
-    top: 56
-  }), /*#__PURE__*/React.createElement(FloatingNavTitle, {
-    title: title,
-    top: 56
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      top: 104,
-      bottom: 0,
-      display: 'flex',
-      flexDirection: 'column'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minHeight: 0,
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      paddingBottom: action ? 16 : 60
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '24px 32px 28px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      textAlign: 'center'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 76,
-      height: 76,
-      borderRadius: 22,
-      background: iconBg,
-      color: iconColor,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, glyph), /*#__PURE__*/React.createElement("span", {
-    style: {
-      marginTop: 18,
-      padding: '5px 11px',
-      borderRadius: 999,
-      background: TOKENS.primarySoft,
-      color: TOKENS.text,
-      fontSize: 11,
-      fontWeight: 700,
-      letterSpacing: 0.8,
-      textTransform: 'uppercase'
-    }
-  }, "Coming soon"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 12,
-      fontSize: 15,
-      color: TOKENS.textSecondary,
-      fontWeight: 500,
-      lineHeight: 1.45,
-      letterSpacing: -0.1,
-      textWrap: 'pretty',
-      whiteSpace: 'pre-line'
-    }
-  }, blurb)), /*#__PURE__*/React.createElement(MoreSectionLabel, null, "What's included"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '0 16px'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: TOKENS.surface,
-      borderRadius: TOKENS.radius.xl,
-      boxShadow: TOKENS.shadow,
-      overflow: 'hidden'
-    }
-  }, items.map((it, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: '15px 18px',
-      borderTop: i > 0 ? `1px solid ${TOKENS.divider}` : 'none'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: 22,
-      height: 22,
-      borderRadius: 999,
-      flexShrink: 0,
-      background: iconBg,
-      color: iconColor,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, /*#__PURE__*/React.createElement(MoreIconCheck, {
-    size: 11,
-    color: iconColor
-  })), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 15,
-      fontWeight: 500,
-      color: TOKENS.text,
-      letterSpacing: -0.15,
-      lineHeight: 1.35
-    }
-  }, it))))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '16px 28px 0',
-      textAlign: 'center',
-      fontSize: 13,
-      color: TOKENS.textTertiary,
-      fontWeight: 400,
-      lineHeight: 1.45
-    }
-  }, "Coming in a future update.")), action && /*#__PURE__*/React.createElement("div", {
-    style: {
-      flexShrink: 0,
-      paddingBottom: 34
-    }
-  }, action)));
-}
-
-// ───────────────────────── More main building blocks ─────────────────
-function MoreSectionLabel({
-  children,
-  top = 14
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: `${top}px 24px 10px`,
-      fontSize: 13,
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      letterSpacing: 0.6,
-      color: TOKENS.textSecondary
-    }
-  }, children);
-}
-function AccountSummaryCard({
-  user,
-  onTap
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    onClick: onTap,
-    style: {
-      background: TOKENS.surface,
-      borderRadius: TOKENS.radius.xl,
-      boxShadow: TOKENS.shadow,
-      padding: '16px 18px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 14,
-      cursor: 'pointer'
-    }
-  }, /*#__PURE__*/React.createElement(MoreAvatar, {
-    size: 56,
-    initials: user.initials,
-    verified: user.verified
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 16,
-      fontWeight: 600,
-      color: TOKENS.text,
-      letterSpacing: -0.25,
-      lineHeight: 1.25,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    }
-  }, user.email), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 4,
-      fontSize: 13,
-      color: TOKENS.textSecondary,
-      fontWeight: 500,
-      letterSpacing: -0.05,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    }
-  }, user.device)), /*#__PURE__*/React.createElement(MoreIconChevron, null));
-}
-
-// A row used inside CardGroup for both Apps & Support sections.
-// Mirrors the icon-tile + chevron pattern used elsewhere in the app.
-function MoreLinkRow({
-  iconBg,
-  iconColor,
-  glyph,
-  title,
-  subtitle,
-  badge,
-  onClick
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    onClick: onClick,
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 14,
-      padding: '16px 18px',
-      cursor: 'pointer'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 40,
-      height: 40,
-      borderRadius: 11,
-      background: iconBg,
-      color: iconColor,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0
-    }
-  }, glyph), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 17,
-      fontWeight: 600,
-      color: TOKENS.text,
-      letterSpacing: -0.25,
-      lineHeight: 1.25,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    }
-  }, title), subtitle && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 4,
-      fontSize: 14,
-      color: TOKENS.textSecondary,
-      fontWeight: 500,
-      letterSpacing: -0.05,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    }
-  }, subtitle)), badge > 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      minWidth: 22,
-      height: 22,
-      borderRadius: 999,
-      padding: '0 7px',
-      boxSizing: 'border-box',
-      background: TOKENS.danger,
-      color: '#FFFFFF',
-      fontSize: 12,
-      fontWeight: 700,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontVariantNumeric: 'tabular-nums'
-    }
-  }, badge), /*#__PURE__*/React.createElement(MoreIconChevron, null));
-}
-
-// ─────────────────────────── Slide-in shell ──────────────────────────
-function SubpageOverlay({
-  open,
-  children
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      inset: 0,
-      background: TOKENS.bg,
-      transform: open ? 'translateX(0%)' : 'translateX(100%)',
-      transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
-      pointerEvents: open ? 'auto' : 'none',
-      boxShadow: open ? '-12px 0 24px rgba(15,15,20,0.06)' : 'none',
-      zIndex: 4
-    }
-  }, children);
-}
-function SubpageHeader({
-  title,
-  accessory = null,
-  onBack
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '50px 16px 14px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      background: TOKENS.bg
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onBack,
-    "aria-label": "Back",
-    style: {
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      padding: 6,
-      margin: '-6px 0 -6px -6px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, /*#__PURE__*/React.createElement(MoreIconBack, null)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0,
-      fontFamily: TOKENS.fontDisplay,
-      fontSize: 19,
-      fontWeight: 700,
-      color: TOKENS.text,
-      letterSpacing: -0.3,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    }
-  }, title), accessory);
-}
-
-// ────────────────────────────── ACCOUNT ──────────────────────────────
-function AccountPage({
-  user,
-  onChangeDevice,
-  onBack
-}) {
-  const [editDevice, setEditDevice] = React.useState(false);
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      width: '100%',
-      height: '100%',
-      background: TOKENS.bg,
-      color: TOKENS.text,
-      fontFamily: TOKENS.font,
-      WebkitFontSmoothing: 'antialiased',
-      overflow: 'hidden'
-    }
-  }, /*#__PURE__*/React.createElement(FloatingBackButton, {
-    onClick: onBack,
-    top: 56
-  }), /*#__PURE__*/React.createElement(FloatingNavTitle, {
-    title: "Account",
-    top: 56
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      top: 104,
-      bottom: 0,
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      paddingBottom: 130
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '8px 24px 28px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center'
-    }
-  }, /*#__PURE__*/React.createElement(MoreAvatar, {
-    size: 92,
-    initials: user.initials
-  })), /*#__PURE__*/React.createElement(MoreSectionLabel, null, "Profile & device"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '0 16px'
-    }
-  }, /*#__PURE__*/React.createElement(CardGroup, null, /*#__PURE__*/React.createElement(AccountReadOnlyRow, {
-    label: "Email",
-    value: user.email
-  }), /*#__PURE__*/React.createElement(AccountDrillRow, {
-    label: "Device name",
-    value: user.device,
-    onClick: () => setEditDevice(true)
-  }), /*#__PURE__*/React.createElement(AccountReadOnlyRow, {
-    label: "App version",
-    value: user.appVersion
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '24px 16px 0'
-    }
-  }, /*#__PURE__*/React.createElement(CardGroup, null, /*#__PURE__*/React.createElement(AccountSignOutRow, {
-    onClick: () => {}
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 24
-    }
-  })), /*#__PURE__*/React.createElement(DeviceNameEditor, {
-    open: editDevice,
-    value: user.device,
-    onCommit: v => onChangeDevice && onChangeDevice(v),
-    onClose: () => setEditDevice(false)
-  }));
-}
-
-// Device Name editor — its own subpage with an editable field + description
-// and Save / back-guard, reusing the Scan-settings editor shell so it
-// behaves identically to those editors.
-function DeviceNameEditor({
-  open,
-  value,
-  onCommit,
-  onClose
-}) {
-  const [draft, setDraft] = React.useState(value || '');
-  const inputRef = React.useRef(null);
-  React.useEffect(() => {
-    if (open) setDraft(value || '');
-  }, [open, value]);
-  React.useEffect(() => {
-    if (open) {
-      const t = setTimeout(() => inputRef.current && inputRef.current.focus(), 360);
-      return () => clearTimeout(t);
-    }
-  }, [open]);
-  const trimmed = draft.trim();
-  const dirty = trimmed.length > 0 && trimmed !== (value || '').trim();
-  return /*#__PURE__*/React.createElement(SettingsEditorShell, {
-    open: open,
-    title: "Device Name",
-    dirty: dirty,
-    onClose: onClose
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minHeight: 0,
-      overflowY: 'auto',
-      WebkitOverflowScrolling: 'touch',
-      paddingTop: 110,
-      paddingLeft: 16,
-      paddingRight: 16,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: TOKENS.surface,
-      borderRadius: TOKENS.radius.xl,
-      boxShadow: TOKENS.shadow,
-      padding: '6px 6px'
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    ref: inputRef,
-    value: draft,
-    onChange: e => setDraft(e.target.value),
-    placeholder: "Device name",
-    spellCheck: false,
-    maxLength: 40,
-    style: {
-      width: '100%',
-      boxSizing: 'border-box',
-      border: 'none',
-      outline: 'none',
-      background: 'transparent',
-      padding: '12px 12px',
-      fontFamily: TOKENS.font,
-      fontSize: 17,
-      fontWeight: 500,
-      color: TOKENS.text,
-      letterSpacing: -0.2
-    }
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '0 8px',
-      fontSize: 13.5,
-      color: TOKENS.textSecondary,
-      fontWeight: 500,
-      letterSpacing: -0.05,
-      lineHeight: 1.5,
-      textWrap: 'pretty'
-    }
-  }, "This name helps identify your device in your Bookzy Pro web app.")), /*#__PURE__*/React.createElement(SSESaveBar, {
-    enabled: dirty,
-    onSave: () => {
-      onCommit(trimmed);
-      onClose();
-    }
-  }));
-}
-function AccountReadOnlyRow({
-  label,
-  value
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: '14px 18px'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: '0 0 auto',
-      width: 120,
-      fontSize: 15,
-      color: TOKENS.text,
-      fontWeight: 500
-    }
-  }, label), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0,
-      textAlign: 'right',
-      fontSize: 15,
-      color: TOKENS.textSecondary,
-      fontWeight: 500,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    }
-  }, value));
-}
-function AccountDrillRow({
-  label,
-  value,
-  onClick
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    onClick: onClick,
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: '14px 18px',
-      cursor: 'pointer'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: '0 0 auto',
-      width: 120,
-      fontSize: 15,
-      color: TOKENS.text,
-      fontWeight: 500
-    }
-  }, label), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0,
-      textAlign: 'right',
-      fontSize: 15,
-      color: TOKENS.textSecondary,
-      fontWeight: 500,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    }
-  }, value), /*#__PURE__*/React.createElement(MoreIconChevron, null));
-}
-function AccountSignOutRow({
-  onClick
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    onClick: onClick,
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '14px 18px',
-      cursor: 'pointer',
-      fontSize: 16,
-      fontWeight: 600,
-      color: TOKENS.danger,
-      letterSpacing: -0.2
-    }
-  }, "Sign out");
-}
-
-// ─────────────────────────────── CHAT ────────────────────────────────
-const CHAT_QUICK_CHIPS = ['Order issue', 'Scanning help', 'Account question', 'Report a bug'];
-
-// Mock seed conversation — kept short so the page has motion when a chip
-// is tapped (or composer used) without overwhelming the empty state.
-const CHAT_SEED = [{
-  id: 'm1',
-  from: 'support',
-  text: 'Hi Claire! 👋 How can we help today?',
-  time: '10:42 AM'
-}];
-function SupportChatPage({
-  onBack,
-  onUnread
-}) {
-  const [messages, setMessages] = React.useState(CHAT_SEED);
-  const [draft, setDraft] = React.useState('');
-  const [typing, setTyping] = React.useState(false);
-  const streamRef = React.useRef(null);
-
-  // The user has seen the seed message by opening the page — clear unread.
-  React.useEffect(() => {
-    onUnread?.(0);
-  }, [onUnread]);
-
-  // Auto-scroll on new messages or typing.
-  React.useEffect(() => {
-    const el = streamRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, typing]);
-  const send = text => {
-    const t = text.trim();
-    if (!t) return;
-    const id = 'u-' + Date.now();
-    const time = nowTimeLabel();
-    setMessages(prev => [...prev, {
-      id,
-      from: 'user',
-      text: t,
-      time
-    }]);
-    setDraft('');
-    // Stand-in support reply with a typing indicator beforehand.
-    setTyping(true);
-    setTimeout(() => {
-      setTyping(false);
-      setMessages(prev => [...prev, {
-        id: 's-' + Date.now(),
-        from: 'support',
-        text: 'Thanks — looking into that now. One moment please.',
-        time: nowTimeLabel()
-      }]);
-    }, 1400);
-  };
-  const userHasTyped = messages.some(m => m.from === 'user');
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative',
-      width: '100%',
-      height: '100%',
-      background: TOKENS.bg,
-      color: TOKENS.text,
-      fontFamily: TOKENS.font,
-      WebkitFontSmoothing: 'antialiased',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column'
-    }
-  }, /*#__PURE__*/React.createElement(FloatingBackButton, {
-    onClick: onBack,
-    top: 56
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      top: 56,
-      left: 0,
-      right: 0,
-      zIndex: 9,
-      height: 40,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      pointerEvents: 'none'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: TOKENS.font,
-      fontSize: 17,
-      fontWeight: 600,
-      color: TOKENS.text,
-      letterSpacing: -0.25,
-      lineHeight: 1.1
-    }
-  }, "Bookzy Support"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      marginTop: 3,
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 5,
-      fontSize: 12,
-      fontWeight: 600,
-      color: TOKENS.textSecondary,
-      letterSpacing: -0.05,
-      lineHeight: 1.1
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: 7,
-      height: 7,
-      borderRadius: 999,
-      background: TOKENS.success,
-      boxShadow: '0 0 0 3px rgba(52,199,89,0.18)'
-    }
-  }), "Online")), /*#__PURE__*/React.createElement("div", {
-    ref: streamRef,
-    style: {
-      flex: 1,
-      minHeight: 0,
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      padding: '104px 16px 12px'
-    }
-  }, /*#__PURE__*/React.createElement(MessageList, {
-    messages: messages
-  }), typing && /*#__PURE__*/React.createElement(TypingIndicator, null)), !userHasTyped && /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '4px 16px 10px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      flexWrap: 'wrap'
-    }
-  }, CHAT_QUICK_CHIPS.map(label => /*#__PURE__*/React.createElement("button", {
-    key: label,
-    onClick: () => send(label),
-    style: {
-      background: TOKENS.surface,
-      border: `1px solid ${TOKENS.divider}`,
-      borderRadius: 999,
-      padding: '9px 14px',
-      fontFamily: TOKENS.font,
-      fontSize: 14,
-      fontWeight: 500,
-      color: TOKENS.text,
-      letterSpacing: -0.05,
-      cursor: 'pointer'
-    }
-  }, label))), /*#__PURE__*/React.createElement(Composer, {
-    value: draft,
-    onChange: setDraft,
-    onSend: () => send(draft)
-  }));
-}
-function nowTimeLabel() {
-  const d = new Date();
-  let h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, '0');
-  const am = h < 12 ? 'AM' : 'PM';
-  h = (h + 11) % 12 + 1;
-  return `${h}:${m} ${am}`;
-}
-function MessageList({
-  messages
-}) {
-  // Group consecutive messages from the same sender.  Only the LAST
-  // message in each group shows the timestamp.
-  const groups = [];
-  let current = null;
-  for (const m of messages) {
-    if (!current || current.from !== m.from) {
-      current = {
-        from: m.from,
-        items: [m]
-      };
-      groups.push(current);
-    } else {
-      current.items.push(m);
-    }
-  }
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 14
-    }
-  }, groups.map((g, gi) => /*#__PURE__*/React.createElement("div", {
-    key: gi,
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: g.from === 'user' ? 'flex-end' : 'flex-start',
-      gap: 4
-    }
-  }, g.items.map((m, mi) => /*#__PURE__*/React.createElement(MessageBubble, {
-    key: m.id,
-    from: m.from,
-    text: m.text,
-    showTimestamp: mi === g.items.length - 1,
-    time: m.time,
-    positionInGroup: g.items.length === 1 ? 'single' : mi === 0 ? 'first' : mi === g.items.length - 1 ? 'last' : 'middle'
-  })))));
-}
-function MessageBubble({
-  from,
-  text,
-  showTimestamp,
-  time,
-  positionInGroup
-}) {
-  const isUser = from === 'user';
-  // Tail-corner radius reduction so consecutive bubbles read as a group.
-  const tailRadius = 6;
-  const fullRadius = 18;
-  let radii;
-  if (isUser) {
-    radii = {
-      tl: fullRadius,
-      tr: fullRadius,
-      bl: fullRadius,
-      br: positionInGroup === 'first' || positionInGroup === 'middle' ? tailRadius : fullRadius
-    };
-    if (positionInGroup === 'middle' || positionInGroup === 'last') radii.tr = tailRadius;
-  } else {
-    radii = {
-      tl: fullRadius,
-      tr: fullRadius,
-      br: fullRadius,
-      bl: positionInGroup === 'first' || positionInGroup === 'middle' ? tailRadius : fullRadius
-    };
-    if (positionInGroup === 'middle' || positionInGroup === 'last') radii.tl = tailRadius;
-  }
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: isUser ? 'flex-end' : 'flex-start',
-      gap: 4,
-      maxWidth: '78%'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: isUser ? TOKENS.primary : TOKENS.surface,
-      color: isUser ? TOKENS.primaryFg : TOKENS.text,
-      padding: '10px 14px',
-      borderTopLeftRadius: radii.tl,
-      borderTopRightRadius: radii.tr,
-      borderBottomLeftRadius: radii.bl,
-      borderBottomRightRadius: radii.br,
-      boxShadow: isUser ? 'none' : '0 1px 2px rgba(15,15,20,0.04)',
-      fontSize: 15,
-      lineHeight: 1.35,
-      letterSpacing: -0.1,
-      whiteSpace: 'pre-wrap',
-      wordBreak: 'break-word'
-    }
-  }, text), showTimestamp && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      fontWeight: 500,
-      color: TOKENS.textTertiary,
-      letterSpacing: 0.05,
-      padding: '0 4px'
-    }
-  }, time));
-}
-function TypingIndicator() {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'flex-start',
-      marginTop: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: TOKENS.surface,
-      padding: '12px 16px',
-      borderRadius: 18,
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 5,
-      boxShadow: '0 1px 2px rgba(15,15,20,0.04)'
-    }
-  }, [0, 1, 2].map(i => /*#__PURE__*/React.createElement("span", {
-    key: i,
-    style: {
-      width: 6,
-      height: 6,
-      borderRadius: 999,
-      background: TOKENS.textTertiary,
-      animation: `more-typing 1.1s ${i * 0.15}s infinite ease-in-out`
-    }
-  }))), /*#__PURE__*/React.createElement("style", null, `
-        @keyframes more-typing {
-          0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
-          30%           { opacity: 1;    transform: translateY(-2px); }
-        }
-      `));
-}
-function Composer({
-  value,
-  onChange,
-  onSend
-}) {
-  const canSend = value.trim().length > 0;
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '8px 12px 18px',
-      background: TOKENS.bg
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'flex-end',
-      gap: 8,
-      background: TOKENS.surface,
-      border: `1px solid ${TOKENS.divider}`,
-      borderRadius: 22,
-      padding: '6px 6px 6px 14px'
-    }
-  }, /*#__PURE__*/React.createElement("textarea", {
-    value: value,
-    onChange: e => onChange(e.target.value),
-    onKeyDown: e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        onSend();
-      }
-    },
-    rows: 1,
-    placeholder: "Write a message",
-    style: {
-      flex: 1,
-      minWidth: 0,
-      resize: 'none',
-      border: 'none',
-      outline: 'none',
-      background: 'transparent',
-      fontFamily: TOKENS.font,
-      fontSize: 15,
-      lineHeight: 1.4,
-      color: TOKENS.text,
-      padding: '8px 0',
-      maxHeight: 110
-    }
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: onSend,
-    disabled: !canSend,
-    "aria-label": "Send",
-    style: {
-      width: 40,
-      height: 40,
-      borderRadius: 999,
-      border: 'none',
-      cursor: canSend ? 'pointer' : 'default',
-      background: canSend ? TOKENS.primary : 'rgba(60,60,67,0.10)',
-      color: '#FFFFFF',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-      transition: 'background 0.15s ease'
-    }
-  }, /*#__PURE__*/React.createElement(MoreIconSend, {
-    color: canSend ? '#FFFFFF' : TOKENS.textTertiary
-  }))));
-}
-Object.assign(window, {
-  MORE_USER,
-  MoreScreenV2,
-  AccountPage,
-  SupportChatPage
-});;
-// screens.jsx — Empty placeholder screens, with SalesCard wired into Home.
-
-function EmptyScreen({
-  title,
-  children,
-  dark = false
-}) {
-  return /*#__PURE__*/React.createElement(ScreenShell, {
-    dark: dark
-  }, /*#__PURE__*/React.createElement(LargeTitle, {
-    dark: dark
-  }, title), children);
-}
-function HomeScreen({
-  onOpenSalesDetails,
-  detailMode,
-  onOpenLiveToday,
-  onOpenInventoryDetails,
-  onOpenScansSubpage,
-  onOpenHighPricingAlerts,
-  onOpenGlobalMinReach,
-  onOpenFeedback,
-  feedbackZero
-}) {
-  return /*#__PURE__*/React.createElement(EmptyScreen, {
-    title: "Home"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '0 16px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 24
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: "12px"
-    }
-  }, /*#__PURE__*/React.createElement(SalesCardG2, {
-    onOpenDetails: onOpenSalesDetails,
-    detailMode: detailMode
-  }), /*#__PURE__*/React.createElement(LiveSalesCard, {
-    onTap: onOpenLiveToday
-  })), /*#__PURE__*/React.createElement(HomeDashboardCards, {
-    onInventoryTap: onOpenInventoryDetails,
-    onScansTap: onOpenScansSubpage,
-    onOpenHighPricingAlerts: onOpenHighPricingAlerts,
-    onOpenGlobalMinReach: onOpenGlobalMinReach,
-    onOpenFeedback: onOpenFeedback,
-    feedbackZero: feedbackZero
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 32
-    }
-  })));
-}
-function OrdersScreen({
-  onOpenOrder
-}) {
-  return /*#__PURE__*/React.createElement(OrdersScreenV2, {
-    onOpenOrder: onOpenOrder
-  });
-}
-function ScanScreen({
-  onOpenLocalDb,
-  onOpenTriggers,
-  onOpenSettings,
-  onLaunchSession,
-  buyCost,
-  localDbUpdatedAt
-}) {
-  return /*#__PURE__*/React.createElement(ScanScreenV2, {
-    onOpenLocalDb: onOpenLocalDb,
-    onOpenTriggers: onOpenTriggers,
-    onOpenSettings: onOpenSettings,
-    onLaunchSession: onLaunchSession,
-    buyCost: buyCost,
-    localDbUpdatedAt: localDbUpdatedAt
-  });
-}
-function MoreScreen({
-  onOverlay,
-  initialPage
-}) {
-  return /*#__PURE__*/React.createElement(MoreScreenV2, {
-    onOverlay: onOverlay,
-    initialPage: initialPage
-  });
-}
-Object.assign(window, {
-  EmptyScreen,
-  HomeScreen,
-  OrdersScreen,
-  ScanScreen,
-  MoreScreen
-});;
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // pro-scan-top-versions.jsx — 10 subtle variations of the current Pro Scan
 // top (verdict card + stats/book card). Offers table, Go deeper, bottom bar
@@ -48897,7 +49254,7 @@ function PSTVOffersSettingsSheet({
   const T = window.TOKENS;
   const [left, setLeft] = window.useBzPref(PSTV_OFF_LEFT_KEY, PSTV_OFF_LEFT_DEF);
   const [rows, setRows] = window.useBzPref('offersRows', '3');
-  const [scroll, setScroll] = window.useBzPref('offersScroll', 'off');
+  const [scroll, setScroll] = window.useBzPref('offersScroll2', 'on');
   const [page, setPage] = React.useState(initPage || null); // null | 'left' | 'rows'
   React.useEffect(() => {
     if (!open) {
@@ -49080,8 +49437,8 @@ function PSTVOffersScroll({
   const n = Math.min(10, offers.reduce((m, c) => Math.max(m, c.rows.length), 0));
   const [rowsPref] = window.useBzPref ? window.useBzPref('offersRows', '3') : ['3'];
   const VISIBLE = foot === 'v3' ? parseInt(rowsPref, 10) || 3 : 4;
-  const [scrollPref] = window.useBzPref ? window.useBzPref('offersScroll', 'off') : ['off'];
-  if (foot === 'v3') fixed = scrollPref !== 'on'; // V3: scrolling is a setting (Offers settings), off by default // V3: offers shown in the table (Offers settings), 3 by default, up to 6
+  const [scrollPref] = window.useBzPref ? window.useBzPref('offersScroll2', 'on') : ['on'];
+  if (foot === 'v3') fixed = scrollPref !== 'on'; // V3: scrolling is a setting (Offers settings), ON by default (18 Nov 2026; key renamed so the new default reaches everyone) // V3: offers shown in the table (Offers settings), 3 by default, up to 6
   const rowsRef = React.useRef(null),
     scRef = React.useRef(null);
   const [viewH, setViewH] = React.useState(VISIBLE * 52 + 8);
@@ -59970,13 +60327,13 @@ const PSTVScreen = React.memo(function PSTVScreen({
 const PSTV_CSS = `
 .pstv-noscroll { scrollbar-width: none; } .pstv-noscroll::-webkit-scrollbar { display: none; }
 .pstv-tap{-webkit-tap-highlight-color:transparent;transition:background-color .15s ease}
-.pstv-tap:active{filter:brightness(0.95)}
+.pstv-tap:active{} /* press feedback now comes from the app-wide system (components.jsx) */
 .pstv-offers24 span[style*="font-size: 25px"]{font-size:24px !important;font-weight:600 !important}
 .pstv-chip{border:none;cursor:pointer;font:inherit;-webkit-tap-highlight-color:transparent}
 /* iOS-style press: a soft gray highlight plus a slight shrink that springs back on release */
 .pstv-press-row,.pstv-press-card{-webkit-tap-highlight-color:transparent;user-select:none;transition:transform .32s cubic-bezier(.34,1.56,.64,1),background-color .18s ease}
-.pstv-press-row:active{background-color:rgba(118,118,128,0.12);transform:scale(.98);transition:transform .12s ease-out,background-color .06s}
-.pstv-press-card:active{background-color:#ECECF1 !important;transform:scale(.96);transition:transform .12s ease-out,background-color .06s}
+.pstv-press-row:active{}
+.pstv-press-card:active{}
 .pstv-conf{position:absolute;left:0;top:0;border-radius:1px;opacity:0;animation:pstvConf .8s cubic-bezier(.15,.7,.3,1) forwards}
 @keyframes pstvFloat{0%,100%{transform:perspective(600px) rotateY(-16deg) translateY(0)}50%{transform:perspective(600px) rotateY(-10deg) translateY(-2px)}}
 @keyframes pstvRipple{0%{box-shadow:0 0 0 0 var(--rc)}80%,100%{box-shadow:0 0 0 13px rgba(0,0,0,0)}}
@@ -63636,7 +63993,7 @@ function BVSalesB2({
 // ─────────────────────────── Offers settings ───────────────────────────
 function BVOffSetA() {
   const [rows, setRows] = window.useBzPref('offersRows', '3');
-  const [scroll, setScroll] = window.useBzPref('offersScroll', 'off');
+  const [scroll, setScroll] = window.useBzPref('offersScroll2', 'on');
   const [left, setLeft] = window.useBzPref('offersLeft2', 'sales');
   return /*#__PURE__*/React.createElement(BVSheet, {
     title: "Offers settings"
@@ -63693,7 +64050,7 @@ function BVOffSetA() {
 }
 function BVOffSetB() {
   const [rows, setRows] = window.useBzPref('offersRows', '3');
-  const [scroll, setScroll] = window.useBzPref('offersScroll', 'off');
+  const [scroll, setScroll] = window.useBzPref('offersScroll2', 'on');
   const [left, setLeft] = window.useBzPref('offersLeft2', 'sales');
   const [pg, setPg] = React.useState(null);
   const R = window.BzRadioRow,
@@ -64803,6 +65160,7 @@ function BVPad({
     }
   }, keys.map(c => /*#__PURE__*/React.createElement("div", {
     key: c,
+    className: "bv-key",
     onClick: () => tap(c),
     style: {
       borderRadius: 11,
@@ -64831,6 +65189,7 @@ function BVPad({
   })) : c)));
 }
 const bvSearchBtn = (v, x) => /*#__PURE__*/React.createElement("div", {
+  className: "bv-btn",
   style: {
     flex: 1,
     height: 50,
@@ -66168,6 +66527,7 @@ const bvField = (v, t, m, x, leftMode) => /*#__PURE__*/React.createElement("div"
   }
 })), !leftMode && bvModeIn(m));
 const bvHistBtn = (onClick, x) => /*#__PURE__*/React.createElement("span", {
+  className: "bv-btn",
   onClick: onClick,
   style: {
     height: 50,
@@ -66186,6 +66546,7 @@ const bvHistBtn = (onClick, x) => /*#__PURE__*/React.createElement("span", {
 }, bvHistIco, "History");
 const bvChip = (txt, onClick, x) => /*#__PURE__*/React.createElement("span", {
   key: txt,
+  className: "bv-btn",
   onClick: onClick,
   style: {
     display: 'inline-flex',
@@ -66508,6 +66869,7 @@ function BVIosKeyboard({
     ...x
   } = {}) => /*#__PURE__*/React.createElement("div", {
     key: c,
+    className: "bv-kk",
     onClick: () => c === '123' && on123 ? on123() : setV(c === '⌫' ? v.slice(0, -1) : c === 'space' ? v + ' ' : c.length === 1 ? (v + c.toLowerCase()).slice(0, 40) : v),
     style: {
       height: 42,
@@ -66626,6 +66988,7 @@ function BVIosKeyboard({
   }), k('space', {
     flex: 4.8
   }), /*#__PURE__*/React.createElement("div", {
+    className: "bv-kk",
     onClick: onSearch,
     style: {
       flex: 2.4,
@@ -66678,21 +67041,29 @@ function BVIosKeyboard({
 // Search two; no recent row with the number pad (only with the keyboard); the search mode inside the bar is a real
 // picker that says "Cloud", "Live" or "Local DB" ──
 const BV_MODES = [['lv', 'Live', '#1B9E51', 'Live from Amazon — freshest, slowest'], ['cl', 'Cloud', '#0A84FF', 'Our cloud — fast, refreshed hourly'], ['db', 'Local DB', '#7E2FB8', 'On this phone — instant, offline']];
+const BV_MODE_FULL = {
+  lv: ['LV', 'Live Search'],
+  cl: ['CL', 'Cloud Search'],
+  db: ['DB', 'Local Database']
+};
 function BVModePick({
   md,
   setMd,
   open,
   setOpen,
   big,
-  pos
+  pos,
+  full
 }) {
+  // full: the menu spans the whole search bar (the bar must be position: relative)
   const m = BV_MODES.find(x => x[0] === md);
   return /*#__PURE__*/React.createElement("span", {
     style: {
-      position: 'relative',
+      position: full ? 'static' : 'relative',
       flexShrink: 0
     }
   }, /*#__PURE__*/React.createElement("span", {
+    className: "bv-btn",
     onClick: () => setOpen(!open),
     style: big ? {
       height: big,
@@ -66711,8 +67082,8 @@ function BVModePick({
       height: 34,
       padding: '0 10px 0 11px',
       borderRadius: 10,
-      background: `${m[2]}1A`,
-      color: m[2],
+      background: m[2],
+      color: '#fff',
       display: 'inline-flex',
       alignItems: 'center',
       gap: 5,
@@ -66731,18 +67102,24 @@ function BVModePick({
     }
   }, /*#__PURE__*/React.createElement("path", {
     d: "M1 1.2l4 4 4-4",
-    stroke: m[2],
+    stroke: big ? m[2] : '#fff',
     strokeWidth: "1.9",
     strokeLinecap: "round",
     strokeLinejoin: "round"
   }))), open && /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
-      right: big ? 0 : -9,
-      top: big ? big + 8 : 44,
       zIndex: 5,
-      ...pos,
-      width: 252,
+      ...(full ? {
+        left: 0,
+        right: 0,
+        top: 'calc(100% + 6px)'
+      } : {
+        right: big ? 0 : -9,
+        top: big ? big + 8 : 44,
+        width: 300,
+        ...pos
+      }),
       background: '#fff',
       borderRadius: 16,
       padding: 6,
@@ -66750,6 +67127,7 @@ function BVModePick({
     }
   }, BV_MODES.map(([k, l, c, h]) => /*#__PURE__*/React.createElement("div", {
     key: k,
+    className: "bv-row",
     onClick: () => {
       setMd(k);
       setOpen(false);
@@ -66757,35 +67135,47 @@ function BVModePick({
     style: {
       display: 'flex',
       alignItems: 'center',
-      gap: 10,
-      padding: '9px 10px',
+      gap: 11,
+      padding: '10px 10px',
       borderRadius: 11,
       cursor: 'pointer',
       background: k === md ? `${c}14` : 'transparent'
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      width: 9,
-      height: 9,
-      borderRadius: '50%',
+      width: 34,
+      height: 23,
+      borderRadius: 7,
       background: c,
+      color: '#fff',
+      fontSize: 11.5,
+      fontWeight: 800,
+      letterSpacing: 0.4,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       flexShrink: 0
     }
-  }), /*#__PURE__*/React.createElement("span", {
+  }, BV_MODE_FULL[k][0]), /*#__PURE__*/React.createElement("span", {
     style: {
-      flex: 1
+      flex: 1,
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 14.5,
+      fontSize: 15,
       fontWeight: 600,
-      color: BV.text
+      color: BV.text,
+      whiteSpace: 'nowrap'
     }
-  }, l), /*#__PURE__*/React.createElement("div", {
+  }, BV_MODE_FULL[k][1]), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 11.5,
+      fontSize: 12,
       color: '#8E8E93',
-      marginTop: 1
+      marginTop: 1,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
     }
   }, h)), k === md && /*#__PURE__*/React.createElement("svg", {
     width: "15",
@@ -66795,7 +67185,10 @@ function BVModePick({
     stroke: c,
     strokeWidth: "3",
     strokeLinecap: "round",
-    strokeLinejoin: "round"
+    strokeLinejoin: "round",
+    style: {
+      flexShrink: 0
+    }
   }, /*#__PURE__*/React.createElement("path", {
     d: "M5 12.5l4.5 4.5L19 7"
   }))))));
@@ -66803,11 +67196,18 @@ function BVModePick({
 function bvSearchE(look) {
   return function BVSearchE() {
     const L = React.useContext(BV_LIVE);
-    const [v, setV] = React.useState(''),
+    const init = L && L.initQuery || '';
+    const [v, setV0] = React.useState(init),
       [t, setT] = React.useState('isbn'),
       [md0, setMd0] = React.useState('cl'),
       [open, setOpen] = React.useState(false),
       [hist, setHist] = React.useState(false);
+    // opened with a number (not-found → Edit search): it starts selected, so the first key replaces it and delete clears it
+    const [selAll, setSelAll] = React.useState(!!init);
+    const setV = nv => {
+      setSelAll(false);
+      setV0(nv);
+    };
     const md = L && L.searchMode ? L.searchMode : md0,
       setMd = L && L.onChangeMode ? L.onChangeMode : setMd0;
     const go = () => L && L.onSubmit && L.onSubmit();
@@ -66825,7 +67225,10 @@ function bvSearchE(look) {
         setV: setV,
         onSearch: go
       }) : null
-    }, /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("style", null, `.bv-key{-webkit-tap-highlight-color:transparent;transition:background-color .18s ease-out}.bv-key:active{background-color:rgba(60,60,67,0.22) !important;transition:none}
+.bv-kk{-webkit-tap-highlight-color:transparent;transition:filter .18s ease-out}.bv-kk:active{filter:brightness(0.8);transition:none}
+.bv-btn{-webkit-tap-highlight-color:transparent;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s ease-out}.bv-btn:active{transform:scale(0.96);opacity:0.72;transition:transform .06s ease-out,opacity .06s ease-out}
+.bv-row{-webkit-tap-highlight-color:transparent}.bv-row:active{background-color:rgba(60,60,67,0.12) !important}`), /*#__PURE__*/React.createElement("div", {
       style: {
         height: 50,
         borderRadius: 14,
@@ -66849,7 +67252,15 @@ function bvSearchE(look) {
         whiteSpace: 'nowrap',
         overflow: 'hidden'
       }
-    }, v || (t === 'isbn' ? 'ISBN' : 'Title'), /*#__PURE__*/React.createElement("span", {
+    }, selAll && v ? /*#__PURE__*/React.createElement("span", {
+      onClick: () => setSelAll(false),
+      style: {
+        background: 'rgba(10,132,255,0.24)',
+        borderRadius: 3,
+        padding: '1px 0',
+        boxShadow: '-2px 0 0 #0A84FF, 2px 0 0 #0A84FF'
+      }
+    }, v) : v || (t === 'isbn' ? 'ISBN' : 'Title'), !selAll && /*#__PURE__*/React.createElement("span", {
       style: {
         display: 'inline-block',
         width: 2,
@@ -66859,6 +67270,7 @@ function bvSearchE(look) {
         marginLeft: 1
       }
     })), /*#__PURE__*/React.createElement(BVModePick, {
+      full: true,
       md: md,
       setMd: setMd,
       open: open,
@@ -66896,44 +67308,34 @@ function bvSearchE(look) {
         flex: 1,
         minHeight: 0,
         display: 'flex',
-        alignItems: 'stretch',
-        gap: 7
+        alignItems: 'flex-start'
       }
     }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1,
-        minWidth: 0,
-        display: 'flex',
-        alignItems: 'stretch',
-        gap: 7,
-        overflow: 'hidden',
-        WebkitMaskImage: 'linear-gradient(90deg,#000 85%,transparent)'
-      }
-    }, BV_RECENT.slice(0, 4).map(([x, n]) => bvChip(x, () => bvPickRecent(L, x, n), {
-      paddingTop: 0,
-      paddingBottom: 0
-    }))), /*#__PURE__*/React.createElement("span", {
+      className: "bv-btn",
       onClick: () => setHist(true),
       style: {
-        display: 'inline-flex',
+        flex: 1,
+        height: 48,
+        maxHeight: '100%',
+        display: 'flex',
         alignItems: 'center',
-        gap: 5,
-        padding: '0 12px 0 10px',
-        borderRadius: 999,
+        gap: 9,
+        padding: '0 14px',
+        borderRadius: 14,
         background: '#fff',
-        fontSize: 13,
+        fontSize: 15.5,
         fontWeight: 600,
-        color: '#0A84FF',
+        color: BV.text,
         cursor: 'pointer',
-        flexShrink: 0
+        boxSizing: 'border-box'
       }
     }, /*#__PURE__*/React.createElement("svg", {
-      width: "14",
-      height: "14",
+      width: "17",
+      height: "17",
       viewBox: "0 0 24 24",
       fill: "none",
-      stroke: "#0A84FF",
-      strokeWidth: "2.3",
+      stroke: BV.text,
+      strokeWidth: "2.2",
       strokeLinecap: "round",
       strokeLinejoin: "round"
     }, /*#__PURE__*/React.createElement("path", {
@@ -66942,8 +67344,23 @@ function bvSearchE(look) {
       d: "M3 3v5h5"
     }), /*#__PURE__*/React.createElement("path", {
       d: "M12 7v5l3 2"
-    })), "History")), t === 'isbn' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(BVPad, {
-      v: v,
+    })), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1
+      }
+    }, "History"), /*#__PURE__*/React.createElement("svg", {
+      width: "8",
+      height: "13",
+      viewBox: "0 0 8 13",
+      fill: "none"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M1 1l6 5.5L1 12",
+      stroke: "#C7C7CC",
+      strokeWidth: "2",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    })))), t === 'isbn' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(BVPad, {
+      v: selAll ? '' : v,
       setV: setV
     }), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -67550,3 +67967,2978 @@ function BzFinalSheet({
   }, ver.render(r));
 }
 window.BzFinalSheet = BzFinalSheet;;
+// scan-session-subpages.jsx — full-screen scan session pages launched by
+// the big Scan button on the Scanner tab.  Which page opens depends on the
+// segmented mode (Legacy vs Pro).  Both slide in from the right with just a
+// floating back button — no header.
+//
+//   • LegacyScanSubpage — the Legacy scanner already ships in the current
+//     app and is NOT being redesigned.  Placeholder for the developer.
+//   • ProScanSubpage    — intentionally EMPTY for now; the Pro scanning
+//     experience gets built here next.
+//
+// Relies on: TOKENS (components.jsx); FloatingBackButton (scans-device-subpage.jsx).
+
+function ScanSessionShell({
+  open,
+  zIndex = 42,
+  children
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      zIndex,
+      background: TOKENS.bg,
+      transform: open ? 'translateX(0)' : 'translateX(100%)',
+      transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
+      overflow: 'hidden',
+      fontFamily: TOKENS.font,
+      color: TOKENS.text,
+      display: 'flex',
+      flexDirection: 'column'
+    }
+  }, children);
+}
+
+// ─── Legacy — placeholder (already implemented) ────────────────────
+function LegacyScanSubpage({
+  open,
+  onClose
+}) {
+  return /*#__PURE__*/React.createElement(ScanSessionShell, {
+    open: open
+  }, /*#__PURE__*/React.createElement(FloatingBackButton, {
+    onClick: onClose,
+    top: 56
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minHeight: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center',
+      padding: '90px 32px 40px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 76,
+      height: 76,
+      borderRadius: '50%',
+      background: 'rgba(60,60,67,0.08)',
+      color: TOKENS.textSecondary,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "34",
+    height: "34",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.9",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M3 5v14M7 5v14M11 5v14M15.5 5v14M19 5v14"
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 20,
+      fontFamily: TOKENS.fontDisplay,
+      fontSize: 24,
+      fontWeight: 700,
+      letterSpacing: -0.5,
+      color: TOKENS.text
+    }
+  }, "Legacy Scanner"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10,
+      fontSize: 14.5,
+      color: TOKENS.textSecondary,
+      fontWeight: 500,
+      letterSpacing: -0.1,
+      lineHeight: 1.5,
+      maxWidth: 286
+    }
+  }, "No redesign needed here. The existing Legacy scanner ships unchanged \u2014 the developer keeps the current implementation."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 26,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '9px 14px',
+      borderRadius: 999,
+      background: 'rgba(60,60,67,0.06)',
+      border: `1px solid ${TOKENS.border}`
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      background: '#16A34A',
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12.5,
+      fontWeight: 600,
+      letterSpacing: -0.05,
+      color: TOKENS.textSecondary
+    }
+  }, "Already implemented"))));
+}
+
+// ─── Pro — the real Pro Scan page (Round-2 Approach A) ─────────────
+function ProScanSubpage({
+  open,
+  onClose
+}) {
+  return /*#__PURE__*/React.createElement(ScanSessionShell, {
+    open: open
+  }, ProScanPage ? /*#__PURE__*/React.createElement(ProScanPage, {
+    onClose: onClose
+  }) : null);
+}
+Object.assign(window, {
+  LegacyScanSubpage,
+  ProScanSubpage
+});;
+// more-screen.jsx — More tab + Account subpage + Chat (Support) subpage.
+//
+// Single file because they share state — particularly the unread-message
+// count for Chat, which has to propagate back to the "Chat with Us" row
+// in the More list.
+//
+// Layout decisions for this first iteration:
+//   • More main page:
+//       - LargeTitle "More" + subtitle "Account, services & more"
+//       - Account summary HERO card (squircle avatar with initials + soft
+//         gradient + small verified check badge; email and device next
+//         to it; chevron). Tapping opens the Account subpage.
+//       - "Apps & services" CardGroup: Seller News Hub, FBA Fee Monitor,
+//         Application 3.  Each row leads with a colored icon tile to
+//         match the visual pattern of the Scan screen's config rows.
+//       - "Support" CardGroup: a single Chat-with-Us row with a numeric
+//         unread badge when present.
+//   • Account subpage:
+//       - Header with back chevron + title.
+//       - Identity block (big squircle avatar centered, email below,
+//         small "Verified seller" caption).
+//       - "Profile & device" CardGroup: Email (read-only), Device name
+//         (drillable), App version (drillable).
+//       - "Sign out" as a separate single-row CardGroup, danger styled.
+//   • Chat subpage:
+//       - Header with back chevron + "Bookzy Support" title and an
+//         online dot.
+//       - Message stream (mock messages) with grouped consecutive bubbles
+//         and timestamps.
+//       - Quick-action chips when the user hasn't typed yet.
+//       - Typing indicator dots when support is composing.
+//       - Composer with a send button that's disabled on empty input.
+//
+// Subpages render as full-screen slide-in overlays within MoreScreenV2
+// (not lifted into app.jsx) so all More navigation state stays local.
+
+const MORE_USER = {
+  email: 'claire@bookzy.example.com',
+  initials: 'CW',
+  // Claire Whitfield
+  device: 'iPhone 15 Pro',
+  appVersion: '2.4.1'
+};
+
+// Avatar gradient — soft, warm, derived from the squircle aesthetic we
+// established on order rows.  Channel-tinted "warm cream" feel.
+const MORE_AVATAR_GRADIENT = 'linear-gradient(135deg, oklch(0.78 0.10 50) 0%, oklch(0.62 0.14 25) 100%)';
+
+// ─────────────────────────────── icons ───────────────────────────────
+function MoreIconNews({
+  size = 20,
+  color = 'currentColor'
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: color,
+    strokeWidth: "1.7",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M4 5h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M19 8h2v10a2 2 0 0 1-2 2"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M8 9h7M8 13h7M8 17h4"
+  }));
+}
+function MoreIconFee({
+  size = 20,
+  color = 'currentColor'
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: color,
+    strokeWidth: "1.7",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M12 3v18"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M16.5 7H10a2.5 2.5 0 0 0 0 5h4a2.5 2.5 0 0 1 0 5H7.5"
+  }));
+}
+function MoreIconApp({
+  size = 20,
+  color = 'currentColor'
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: color,
+    strokeWidth: "1.7",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "3.5",
+    y: "3.5",
+    width: "7",
+    height: "7",
+    rx: "1.5"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "13.5",
+    y: "3.5",
+    width: "7",
+    height: "7",
+    rx: "1.5"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "3.5",
+    y: "13.5",
+    width: "7",
+    height: "7",
+    rx: "1.5"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "13.5",
+    y: "13.5",
+    width: "7",
+    height: "7",
+    rx: "1.5"
+  }));
+}
+function MoreIconAccount({
+  size = 20,
+  color = 'currentColor'
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: color,
+    strokeWidth: "1.7",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "8.5",
+    r: "3.75"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M4.5 20c.9-3.6 3.9-5.75 7.5-5.75s6.6 2.15 7.5 5.75"
+  }));
+}
+function MoreIconChat({
+  size = 20,
+  color = 'currentColor'
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: color,
+    strokeWidth: "1.7",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"
+  }));
+}
+function MoreIconChevron({
+  size = 13,
+  color = TOKENS.textTertiary
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 8 13",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M1 1l6 5.5L1 12",
+    stroke: color,
+    strokeWidth: "1.8",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }));
+}
+function MoreIconBack({
+  size = 22,
+  color = TOKENS.text
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 22 22",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M14 4l-7 7 7 7",
+    stroke: color,
+    strokeWidth: "1.9",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }));
+}
+function MoreIconCheck({
+  size = 11,
+  color = '#FFFFFF'
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 11 11",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M2 5.5l2.5 2.5L9 3.5",
+    stroke: color,
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }));
+}
+function MoreIconSend({
+  size = 18,
+  color = '#FFFFFF'
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 18 18",
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M3 15L15 9 3 3l1.5 6L11 9l-6.5 0L3 15z",
+    fill: color
+  }));
+}
+
+// ─────────────────────────── avatar primitive ───────────────────────
+//   • Squircle (matches order-row aesthetic).
+//   • Soft warm gradient + initials.
+//   • Optional verified check badge in the bottom-right corner.
+function MoreAvatar({
+  size = 56,
+  initials = 'CW',
+  verified = false
+}) {
+  const radius = Math.round(size / 3);
+  const badge = Math.max(14, Math.round(size * 0.32));
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      width: size,
+      height: size,
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: size,
+      height: size,
+      borderRadius: radius,
+      background: MORE_AVATAR_GRADIENT,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#FFFFFF',
+      fontFamily: TOKENS.fontDisplay,
+      fontWeight: 700,
+      fontSize: Math.round(size * 0.42),
+      letterSpacing: -0.6,
+      boxShadow: '0 1px 2px rgba(15,15,20,0.10), 0 6px 14px rgba(15,15,20,0.10)'
+    }
+  }, initials), verified && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      right: -2,
+      bottom: -2,
+      width: badge,
+      height: badge,
+      borderRadius: 999,
+      background: TOKENS.success,
+      border: `2px solid ${TOKENS.surface}`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, /*#__PURE__*/React.createElement(MoreIconCheck, {
+    size: Math.round(badge * 0.55)
+  })));
+}
+
+// ─────────────────────────────── More main ──────────────────────────
+function MoreScreenV2({
+  onOverlay,
+  initialPage = null
+}) {
+  const [openPage, setOpenPage] = React.useState(initialPage); // 'account' | 'chat' | 'news' | 'fees' | null
+  const [unread, setUnread] = React.useState(2); // unread support messages
+  // Device name is editable (Account → Device name subpage); lifted here
+  // so both the summary card and the account page reflect edits.
+  const [deviceName, setDeviceName] = React.useState(MORE_USER.device);
+  const user = {
+    ...MORE_USER,
+    device: deviceName
+  };
+  // Hide the host tab bar whenever a More subpage (Account / Chat) is open,
+  // so these match every other subpage in the app.
+  React.useEffect(() => {
+    onOverlay && onOverlay(openPage !== null);
+  }, [openPage]);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      background: TOKENS.bg,
+      color: TOKENS.text,
+      fontFamily: TOKENS.font,
+      WebkitFontSmoothing: 'antialiased',
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      paddingTop: 56,
+      paddingBottom: 130
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '6px 24px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("h1", {
+    style: {
+      margin: 0,
+      fontFamily: TOKENS.fontDisplay,
+      fontSize: 34,
+      lineHeight: '40px',
+      fontWeight: 700,
+      letterSpacing: -0.8,
+      color: TOKENS.text
+    }
+  }, "More")), /*#__PURE__*/React.createElement(MoreSectionLabel, null, "Account"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '0 16px'
+    }
+  }, /*#__PURE__*/React.createElement(CardGroup, null, /*#__PURE__*/React.createElement(MoreLinkRow, {
+    iconBg: "rgba(3,2,19,0.08)",
+    iconColor: TOKENS.text,
+    glyph: /*#__PURE__*/React.createElement(MoreIconAccount, null),
+    title: user.email,
+    subtitle: user.device,
+    onClick: () => setOpenPage('account')
+  }))), /*#__PURE__*/React.createElement(MoreSectionLabel, {
+    top: 32
+  }, "Support"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '0 16px'
+    }
+  }, /*#__PURE__*/React.createElement(CardGroup, null, /*#__PURE__*/React.createElement(MoreLinkRow, {
+    iconBg: "rgba(3,2,19,0.08)",
+    iconColor: TOKENS.text,
+    glyph: /*#__PURE__*/React.createElement(MoreIconChat, null),
+    title: "Chat with Us",
+    subtitle: "Talk to our support team",
+    onClick: () => setOpenPage('chat')
+  }))), /*#__PURE__*/React.createElement(MoreSectionLabel, {
+    top: 32
+  }, "Other apps and services"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '0 16px'
+    }
+  }, /*#__PURE__*/React.createElement(CardGroup, null, /*#__PURE__*/React.createElement(MoreLinkRow, {
+    iconBg: "rgba(10,132,255,0.14)",
+    iconColor: "#0064D1",
+    glyph: /*#__PURE__*/React.createElement(MoreIconNews, null),
+    title: "Seller News Hub",
+    subtitle: "Industry updates & marketplace tips",
+    onClick: () => setOpenPage('news')
+  }), /*#__PURE__*/React.createElement(MoreLinkRow, {
+    iconBg: "rgba(52,199,89,0.16)",
+    iconColor: "#1A7F3F",
+    glyph: /*#__PURE__*/React.createElement(MoreIconFee, null),
+    title: "FBA Fee Monitor",
+    subtitle: "Track fee changes across your catalog",
+    onClick: () => setOpenPage('fees')
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 24
+    }
+  })), /*#__PURE__*/React.createElement(SubpageOverlay, {
+    open: openPage === 'account'
+  }, /*#__PURE__*/React.createElement(AccountPage, {
+    user: user,
+    onChangeDevice: setDeviceName,
+    onBack: () => setOpenPage(null)
+  })), /*#__PURE__*/React.createElement(SubpageOverlay, {
+    open: openPage === 'chat'
+  }, /*#__PURE__*/React.createElement(ComingSoonPage, {
+    title: "Chat with Us",
+    iconBg: "rgba(3,2,19,0.08)",
+    iconColor: TOKENS.text,
+    glyph: /*#__PURE__*/React.createElement(MoreIconChat, {
+      size: 34
+    }),
+    blurb: "Get help from our team, right in the app.",
+    items: ['Live chat with our support team', 'Help with scans, listings and more'],
+    action: /*#__PURE__*/React.createElement(WhatsAppSupportCard, null),
+    onBack: () => setOpenPage(null)
+  })), /*#__PURE__*/React.createElement(SubpageOverlay, {
+    open: openPage === 'news'
+  }, /*#__PURE__*/React.createElement(ComingSoonPage, {
+    title: "Seller News Hub",
+    iconBg: "rgba(10,132,255,0.14)",
+    iconColor: "#0064D1",
+    glyph: /*#__PURE__*/React.createElement(MoreIconNews, {
+      size: 34
+    }),
+    blurb: "News and know-how for booksellers.",
+    items: ['Bookz Pro announcements', 'Amazon policy updates', 'Book sales near you', 'Bookselling tips and tricks'],
+    onBack: () => setOpenPage(null)
+  })), /*#__PURE__*/React.createElement(SubpageOverlay, {
+    open: openPage === 'fees'
+  }, /*#__PURE__*/React.createElement(ComingSoonPage, {
+    title: "FBA Fee Monitor",
+    iconBg: "rgba(52,199,89,0.16)",
+    iconColor: "#1A7F3F",
+    glyph: /*#__PURE__*/React.createElement(MoreIconFee, {
+      size: 34
+    }),
+    blurb: "Keep an eye on FBA fees.",
+    items: ['Alerts before a SKU\'s fees go up', 'Set min/max prices', 'Create removals'],
+    onBack: () => setOpenPage(null)
+  })));
+}
+
+// ───────────────────────── WhatsApp support card ─────────────────────
+// Interim support route while in-app chat is coming soon: opens the
+// Bookz Pro Support WhatsApp Business line.
+const SUPPORT_WHATSAPP = {
+  display: '+90 544 174 13 94',
+  url: 'https://wa.me/905441741394'
+};
+
+// Phone number with a copy button — shows a check + "Copied" briefly.
+function WhatsAppNumberRow() {
+  const [copied, setCopied] = React.useState(false);
+  const copy = () => {
+    const text = SUPPORT_WHATSAPP.display;
+    const done = () => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, done);
+        return;
+      }
+    } catch (e) {}
+    done();
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      fontWeight: 500,
+      color: TOKENS.textSecondary,
+      letterSpacing: -0.05,
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, SUPPORT_WHATSAPP.display), /*#__PURE__*/React.createElement("button", {
+    onClick: copy,
+    "aria-label": copied ? 'Copied' : 'Copy phone number',
+    style: {
+      width: 36,
+      height: 36,
+      padding: 0,
+      border: 'none',
+      background: 'none',
+      cursor: 'pointer',
+      color: copied ? TOKENS.success : TOKENS.textSecondary,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, copied ? /*#__PURE__*/React.createElement("svg", {
+    width: "16",
+    height: "16",
+    viewBox: "0 0 14 14",
+    fill: "none",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M2.5 7.5l3 3 6-7",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  })) : /*#__PURE__*/React.createElement("svg", {
+    width: "16",
+    height: "16",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.8",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "8.5",
+    y: "8.5",
+    width: "12",
+    height: "12",
+    rx: "2.5"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"
+  }))));
+}
+function WhatsAppSupportCard() {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '12px 16px 0',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      fontSize: 15,
+      fontWeight: 600,
+      color: TOKENS.text,
+      letterSpacing: -0.2
+    }
+  }, "Need help now?"), /*#__PURE__*/React.createElement("a", {
+    href: SUPPORT_WHATSAPP.url,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      height: 48,
+      borderRadius: 14,
+      textDecoration: 'none',
+      background: '#25D366',
+      color: '#FFFFFF',
+      fontFamily: TOKENS.font,
+      fontSize: 16,
+      fontWeight: 600,
+      letterSpacing: -0.2
+    }
+  }, /*#__PURE__*/React.createElement(MoreIconChat, {
+    size: 18,
+    color: "#FFFFFF"
+  }), "Chat on WhatsApp"), /*#__PURE__*/React.createElement(WhatsAppNumberRow, null));
+}
+
+// ─────────────────────────── Coming soon page ────────────────────────
+// Shared placeholder for Apps & services entries that aren't built yet:
+// icon, "Coming soon" pill, one-line pitch, and what's included.
+function ComingSoonPage({
+  title,
+  iconBg,
+  iconColor,
+  glyph,
+  blurb,
+  items = [],
+  action = null,
+  onBack
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      background: TOKENS.bg,
+      color: TOKENS.text,
+      fontFamily: TOKENS.font,
+      WebkitFontSmoothing: 'antialiased',
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement(FloatingBackButton, {
+    onClick: onBack,
+    top: 56
+  }), /*#__PURE__*/React.createElement(FloatingNavTitle, {
+    title: title,
+    top: 56
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 104,
+      bottom: 0,
+      display: 'flex',
+      flexDirection: 'column'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minHeight: 0,
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      paddingBottom: action ? 16 : 60
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '24px 32px 28px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 76,
+      height: 76,
+      borderRadius: 22,
+      background: iconBg,
+      color: iconColor,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, glyph), /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginTop: 18,
+      padding: '5px 11px',
+      borderRadius: 999,
+      background: TOKENS.primarySoft,
+      color: TOKENS.text,
+      fontSize: 11,
+      fontWeight: 700,
+      letterSpacing: 0.8,
+      textTransform: 'uppercase'
+    }
+  }, "Coming soon"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12,
+      fontSize: 15,
+      color: TOKENS.textSecondary,
+      fontWeight: 500,
+      lineHeight: 1.45,
+      letterSpacing: -0.1,
+      textWrap: 'pretty',
+      whiteSpace: 'pre-line'
+    }
+  }, blurb)), /*#__PURE__*/React.createElement(MoreSectionLabel, null, "What's included"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '0 16px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      boxShadow: TOKENS.shadow,
+      overflow: 'hidden'
+    }
+  }, items.map((it, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '15px 18px',
+      borderTop: i > 0 ? `1px solid ${TOKENS.divider}` : 'none'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 22,
+      height: 22,
+      borderRadius: 999,
+      flexShrink: 0,
+      background: iconBg,
+      color: iconColor,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, /*#__PURE__*/React.createElement(MoreIconCheck, {
+    size: 11,
+    color: iconColor
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      fontWeight: 500,
+      color: TOKENS.text,
+      letterSpacing: -0.15,
+      lineHeight: 1.35
+    }
+  }, it))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '16px 28px 0',
+      textAlign: 'center',
+      fontSize: 13,
+      color: TOKENS.textTertiary,
+      fontWeight: 400,
+      lineHeight: 1.45
+    }
+  }, "Coming in a future update.")), action && /*#__PURE__*/React.createElement("div", {
+    style: {
+      flexShrink: 0,
+      paddingBottom: 34
+    }
+  }, action)));
+}
+
+// ───────────────────────── More main building blocks ─────────────────
+function MoreSectionLabel({
+  children,
+  top = 14
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: `${top}px 24px 10px`,
+      fontSize: 13,
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+      color: TOKENS.textSecondary
+    }
+  }, children);
+}
+function AccountSummaryCard({
+  user,
+  onTap
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: onTap,
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      boxShadow: TOKENS.shadow,
+      padding: '16px 18px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 14,
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement(MoreAvatar, {
+    size: 56,
+    initials: user.initials,
+    verified: user.verified
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 16,
+      fontWeight: 600,
+      color: TOKENS.text,
+      letterSpacing: -0.25,
+      lineHeight: 1.25,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, user.email), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4,
+      fontSize: 13,
+      color: TOKENS.textSecondary,
+      fontWeight: 500,
+      letterSpacing: -0.05,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, user.device)), /*#__PURE__*/React.createElement(MoreIconChevron, null));
+}
+
+// A row used inside CardGroup for both Apps & Support sections.
+// Mirrors the icon-tile + chevron pattern used elsewhere in the app.
+function MoreLinkRow({
+  iconBg,
+  iconColor,
+  glyph,
+  title,
+  subtitle,
+  badge,
+  onClick
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: onClick,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 14,
+      padding: '16px 18px',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 40,
+      height: 40,
+      borderRadius: 11,
+      background: iconBg,
+      color: iconColor,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0
+    }
+  }, glyph), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 17,
+      fontWeight: 600,
+      color: TOKENS.text,
+      letterSpacing: -0.25,
+      lineHeight: 1.25,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, title), subtitle && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4,
+      fontSize: 14,
+      color: TOKENS.textSecondary,
+      fontWeight: 500,
+      letterSpacing: -0.05,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, subtitle)), badge > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      minWidth: 22,
+      height: 22,
+      borderRadius: 999,
+      padding: '0 7px',
+      boxSizing: 'border-box',
+      background: TOKENS.danger,
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: 700,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, badge), /*#__PURE__*/React.createElement(MoreIconChevron, null));
+}
+
+// ─────────────────────────── Slide-in shell ──────────────────────────
+function SubpageOverlay({
+  open,
+  children
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      background: TOKENS.bg,
+      transform: open ? 'translateX(0%)' : 'translateX(100%)',
+      transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
+      pointerEvents: open ? 'auto' : 'none',
+      boxShadow: open ? '-12px 0 24px rgba(15,15,20,0.06)' : 'none',
+      zIndex: 4
+    }
+  }, children);
+}
+function SubpageHeader({
+  title,
+  accessory = null,
+  onBack
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '50px 16px 14px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      background: TOKENS.bg
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    "aria-label": "Back",
+    style: {
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      padding: 6,
+      margin: '-6px 0 -6px -6px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, /*#__PURE__*/React.createElement(MoreIconBack, null)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      fontFamily: TOKENS.fontDisplay,
+      fontSize: 19,
+      fontWeight: 700,
+      color: TOKENS.text,
+      letterSpacing: -0.3,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, title), accessory);
+}
+
+// ────────────────────────────── ACCOUNT ──────────────────────────────
+function AccountPage({
+  user,
+  onChangeDevice,
+  onBack
+}) {
+  const [editDevice, setEditDevice] = React.useState(false);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      background: TOKENS.bg,
+      color: TOKENS.text,
+      fontFamily: TOKENS.font,
+      WebkitFontSmoothing: 'antialiased',
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement(FloatingBackButton, {
+    onClick: onBack,
+    top: 56
+  }), /*#__PURE__*/React.createElement(FloatingNavTitle, {
+    title: "Account",
+    top: 56
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 104,
+      bottom: 0,
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      paddingBottom: 130
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '8px 24px 28px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement(MoreAvatar, {
+    size: 92,
+    initials: user.initials
+  })), /*#__PURE__*/React.createElement(MoreSectionLabel, null, "Profile & device"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '0 16px'
+    }
+  }, /*#__PURE__*/React.createElement(CardGroup, null, /*#__PURE__*/React.createElement(AccountReadOnlyRow, {
+    label: "Email",
+    value: user.email
+  }), /*#__PURE__*/React.createElement(AccountDrillRow, {
+    label: "Device name",
+    value: user.device,
+    onClick: () => setEditDevice(true)
+  }), /*#__PURE__*/React.createElement(AccountReadOnlyRow, {
+    label: "App version",
+    value: user.appVersion
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '24px 16px 0'
+    }
+  }, /*#__PURE__*/React.createElement(CardGroup, null, /*#__PURE__*/React.createElement(AccountSignOutRow, {
+    onClick: () => {}
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 24
+    }
+  })), /*#__PURE__*/React.createElement(DeviceNameEditor, {
+    open: editDevice,
+    value: user.device,
+    onCommit: v => onChangeDevice && onChangeDevice(v),
+    onClose: () => setEditDevice(false)
+  }));
+}
+
+// Device Name editor — its own subpage with an editable field + description
+// and Save / back-guard, reusing the Scan-settings editor shell so it
+// behaves identically to those editors.
+function DeviceNameEditor({
+  open,
+  value,
+  onCommit,
+  onClose
+}) {
+  const [draft, setDraft] = React.useState(value || '');
+  const inputRef = React.useRef(null);
+  React.useEffect(() => {
+    if (open) setDraft(value || '');
+  }, [open, value]);
+  React.useEffect(() => {
+    if (open) {
+      const t = setTimeout(() => inputRef.current && inputRef.current.focus(), 360);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+  const trimmed = draft.trim();
+  const dirty = trimmed.length > 0 && trimmed !== (value || '').trim();
+  return /*#__PURE__*/React.createElement(SettingsEditorShell, {
+    open: open,
+    title: "Device Name",
+    dirty: dirty,
+    onClose: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minHeight: 0,
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
+      paddingTop: 110,
+      paddingLeft: 16,
+      paddingRight: 16,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      borderRadius: TOKENS.radius.xl,
+      boxShadow: TOKENS.shadow,
+      padding: '6px 6px'
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    ref: inputRef,
+    value: draft,
+    onChange: e => setDraft(e.target.value),
+    placeholder: "Device name",
+    spellCheck: false,
+    maxLength: 40,
+    style: {
+      width: '100%',
+      boxSizing: 'border-box',
+      border: 'none',
+      outline: 'none',
+      background: 'transparent',
+      padding: '12px 12px',
+      fontFamily: TOKENS.font,
+      fontSize: 17,
+      fontWeight: 500,
+      color: TOKENS.text,
+      letterSpacing: -0.2
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '0 8px',
+      fontSize: 13.5,
+      color: TOKENS.textSecondary,
+      fontWeight: 500,
+      letterSpacing: -0.05,
+      lineHeight: 1.5,
+      textWrap: 'pretty'
+    }
+  }, "This name helps identify your device in your Bookzy Pro web app.")), /*#__PURE__*/React.createElement(SSESaveBar, {
+    enabled: dirty,
+    onSave: () => {
+      onCommit(trimmed);
+      onClose();
+    }
+  }));
+}
+function AccountReadOnlyRow({
+  label,
+  value
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '14px 18px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: '0 0 auto',
+      width: 120,
+      fontSize: 15,
+      color: TOKENS.text,
+      fontWeight: 500
+    }
+  }, label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      textAlign: 'right',
+      fontSize: 15,
+      color: TOKENS.textSecondary,
+      fontWeight: 500,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, value));
+}
+function AccountDrillRow({
+  label,
+  value,
+  onClick
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: onClick,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '14px 18px',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: '0 0 auto',
+      width: 120,
+      fontSize: 15,
+      color: TOKENS.text,
+      fontWeight: 500
+    }
+  }, label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      textAlign: 'right',
+      fontSize: 15,
+      color: TOKENS.textSecondary,
+      fontWeight: 500,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, value), /*#__PURE__*/React.createElement(MoreIconChevron, null));
+}
+function AccountSignOutRow({
+  onClick
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: onClick,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '14px 18px',
+      cursor: 'pointer',
+      fontSize: 16,
+      fontWeight: 600,
+      color: TOKENS.danger,
+      letterSpacing: -0.2
+    }
+  }, "Sign out");
+}
+
+// ─────────────────────────────── CHAT ────────────────────────────────
+const CHAT_QUICK_CHIPS = ['Order issue', 'Scanning help', 'Account question', 'Report a bug'];
+
+// Mock seed conversation — kept short so the page has motion when a chip
+// is tapped (or composer used) without overwhelming the empty state.
+const CHAT_SEED = [{
+  id: 'm1',
+  from: 'support',
+  text: 'Hi Claire! 👋 How can we help today?',
+  time: '10:42 AM'
+}];
+function SupportChatPage({
+  onBack,
+  onUnread
+}) {
+  const [messages, setMessages] = React.useState(CHAT_SEED);
+  const [draft, setDraft] = React.useState('');
+  const [typing, setTyping] = React.useState(false);
+  const streamRef = React.useRef(null);
+
+  // The user has seen the seed message by opening the page — clear unread.
+  React.useEffect(() => {
+    onUnread?.(0);
+  }, [onUnread]);
+
+  // Auto-scroll on new messages or typing.
+  React.useEffect(() => {
+    const el = streamRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, typing]);
+  const send = text => {
+    const t = text.trim();
+    if (!t) return;
+    const id = 'u-' + Date.now();
+    const time = nowTimeLabel();
+    setMessages(prev => [...prev, {
+      id,
+      from: 'user',
+      text: t,
+      time
+    }]);
+    setDraft('');
+    // Stand-in support reply with a typing indicator beforehand.
+    setTyping(true);
+    setTimeout(() => {
+      setTyping(false);
+      setMessages(prev => [...prev, {
+        id: 's-' + Date.now(),
+        from: 'support',
+        text: 'Thanks — looking into that now. One moment please.',
+        time: nowTimeLabel()
+      }]);
+    }, 1400);
+  };
+  const userHasTyped = messages.some(m => m.from === 'user');
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      background: TOKENS.bg,
+      color: TOKENS.text,
+      fontFamily: TOKENS.font,
+      WebkitFontSmoothing: 'antialiased',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column'
+    }
+  }, /*#__PURE__*/React.createElement(FloatingBackButton, {
+    onClick: onBack,
+    top: 56
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      top: 56,
+      left: 0,
+      right: 0,
+      zIndex: 9,
+      height: 40,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      pointerEvents: 'none'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: TOKENS.font,
+      fontSize: 17,
+      fontWeight: 600,
+      color: TOKENS.text,
+      letterSpacing: -0.25,
+      lineHeight: 1.1
+    }
+  }, "Bookzy Support"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginTop: 3,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 5,
+      fontSize: 12,
+      fontWeight: 600,
+      color: TOKENS.textSecondary,
+      letterSpacing: -0.05,
+      lineHeight: 1.1
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 7,
+      height: 7,
+      borderRadius: 999,
+      background: TOKENS.success,
+      boxShadow: '0 0 0 3px rgba(52,199,89,0.18)'
+    }
+  }), "Online")), /*#__PURE__*/React.createElement("div", {
+    ref: streamRef,
+    style: {
+      flex: 1,
+      minHeight: 0,
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      padding: '104px 16px 12px'
+    }
+  }, /*#__PURE__*/React.createElement(MessageList, {
+    messages: messages
+  }), typing && /*#__PURE__*/React.createElement(TypingIndicator, null)), !userHasTyped && /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '4px 16px 10px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      flexWrap: 'wrap'
+    }
+  }, CHAT_QUICK_CHIPS.map(label => /*#__PURE__*/React.createElement("button", {
+    key: label,
+    onClick: () => send(label),
+    style: {
+      background: TOKENS.surface,
+      border: `1px solid ${TOKENS.divider}`,
+      borderRadius: 999,
+      padding: '9px 14px',
+      fontFamily: TOKENS.font,
+      fontSize: 14,
+      fontWeight: 500,
+      color: TOKENS.text,
+      letterSpacing: -0.05,
+      cursor: 'pointer'
+    }
+  }, label))), /*#__PURE__*/React.createElement(Composer, {
+    value: draft,
+    onChange: setDraft,
+    onSend: () => send(draft)
+  }));
+}
+function nowTimeLabel() {
+  const d = new Date();
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const am = h < 12 ? 'AM' : 'PM';
+  h = (h + 11) % 12 + 1;
+  return `${h}:${m} ${am}`;
+}
+function MessageList({
+  messages
+}) {
+  // Group consecutive messages from the same sender.  Only the LAST
+  // message in each group shows the timestamp.
+  const groups = [];
+  let current = null;
+  for (const m of messages) {
+    if (!current || current.from !== m.from) {
+      current = {
+        from: m.from,
+        items: [m]
+      };
+      groups.push(current);
+    } else {
+      current.items.push(m);
+    }
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 14
+    }
+  }, groups.map((g, gi) => /*#__PURE__*/React.createElement("div", {
+    key: gi,
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: g.from === 'user' ? 'flex-end' : 'flex-start',
+      gap: 4
+    }
+  }, g.items.map((m, mi) => /*#__PURE__*/React.createElement(MessageBubble, {
+    key: m.id,
+    from: m.from,
+    text: m.text,
+    showTimestamp: mi === g.items.length - 1,
+    time: m.time,
+    positionInGroup: g.items.length === 1 ? 'single' : mi === 0 ? 'first' : mi === g.items.length - 1 ? 'last' : 'middle'
+  })))));
+}
+function MessageBubble({
+  from,
+  text,
+  showTimestamp,
+  time,
+  positionInGroup
+}) {
+  const isUser = from === 'user';
+  // Tail-corner radius reduction so consecutive bubbles read as a group.
+  const tailRadius = 6;
+  const fullRadius = 18;
+  let radii;
+  if (isUser) {
+    radii = {
+      tl: fullRadius,
+      tr: fullRadius,
+      bl: fullRadius,
+      br: positionInGroup === 'first' || positionInGroup === 'middle' ? tailRadius : fullRadius
+    };
+    if (positionInGroup === 'middle' || positionInGroup === 'last') radii.tr = tailRadius;
+  } else {
+    radii = {
+      tl: fullRadius,
+      tr: fullRadius,
+      br: fullRadius,
+      bl: positionInGroup === 'first' || positionInGroup === 'middle' ? tailRadius : fullRadius
+    };
+    if (positionInGroup === 'middle' || positionInGroup === 'last') radii.tl = tailRadius;
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: isUser ? 'flex-end' : 'flex-start',
+      gap: 4,
+      maxWidth: '78%'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: isUser ? TOKENS.primary : TOKENS.surface,
+      color: isUser ? TOKENS.primaryFg : TOKENS.text,
+      padding: '10px 14px',
+      borderTopLeftRadius: radii.tl,
+      borderTopRightRadius: radii.tr,
+      borderBottomLeftRadius: radii.bl,
+      borderBottomRightRadius: radii.br,
+      boxShadow: isUser ? 'none' : '0 1px 2px rgba(15,15,20,0.04)',
+      fontSize: 15,
+      lineHeight: 1.35,
+      letterSpacing: -0.1,
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word'
+    }
+  }, text), showTimestamp && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 500,
+      color: TOKENS.textTertiary,
+      letterSpacing: 0.05,
+      padding: '0 4px'
+    }
+  }, time));
+}
+function TypingIndicator() {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'flex-start',
+      marginTop: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: TOKENS.surface,
+      padding: '12px 16px',
+      borderRadius: 18,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 5,
+      boxShadow: '0 1px 2px rgba(15,15,20,0.04)'
+    }
+  }, [0, 1, 2].map(i => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    style: {
+      width: 6,
+      height: 6,
+      borderRadius: 999,
+      background: TOKENS.textTertiary,
+      animation: `more-typing 1.1s ${i * 0.15}s infinite ease-in-out`
+    }
+  }))), /*#__PURE__*/React.createElement("style", null, `
+        @keyframes more-typing {
+          0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+          30%           { opacity: 1;    transform: translateY(-2px); }
+        }
+      `));
+}
+function Composer({
+  value,
+  onChange,
+  onSend
+}) {
+  const canSend = value.trim().length > 0;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '8px 12px 18px',
+      background: TOKENS.bg
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'flex-end',
+      gap: 8,
+      background: TOKENS.surface,
+      border: `1px solid ${TOKENS.divider}`,
+      borderRadius: 22,
+      padding: '6px 6px 6px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("textarea", {
+    value: value,
+    onChange: e => onChange(e.target.value),
+    onKeyDown: e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        onSend();
+      }
+    },
+    rows: 1,
+    placeholder: "Write a message",
+    style: {
+      flex: 1,
+      minWidth: 0,
+      resize: 'none',
+      border: 'none',
+      outline: 'none',
+      background: 'transparent',
+      fontFamily: TOKENS.font,
+      fontSize: 15,
+      lineHeight: 1.4,
+      color: TOKENS.text,
+      padding: '8px 0',
+      maxHeight: 110
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: onSend,
+    disabled: !canSend,
+    "aria-label": "Send",
+    style: {
+      width: 40,
+      height: 40,
+      borderRadius: 999,
+      border: 'none',
+      cursor: canSend ? 'pointer' : 'default',
+      background: canSend ? TOKENS.primary : 'rgba(60,60,67,0.10)',
+      color: '#FFFFFF',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+      transition: 'background 0.15s ease'
+    }
+  }, /*#__PURE__*/React.createElement(MoreIconSend, {
+    color: canSend ? '#FFFFFF' : TOKENS.textTertiary
+  }))));
+}
+Object.assign(window, {
+  MORE_USER,
+  MoreScreenV2,
+  AccountPage,
+  SupportChatPage
+});;
+// screens.jsx — Empty placeholder screens, with SalesCard wired into Home.
+
+function EmptyScreen({
+  title,
+  children,
+  dark = false
+}) {
+  return /*#__PURE__*/React.createElement(ScreenShell, {
+    dark: dark
+  }, /*#__PURE__*/React.createElement(LargeTitle, {
+    dark: dark
+  }, title), children);
+}
+function HomeScreen({
+  onOpenSalesDetails,
+  detailMode,
+  onOpenLiveToday,
+  onOpenInventoryDetails,
+  onOpenScansSubpage,
+  onOpenHighPricingAlerts,
+  onOpenGlobalMinReach,
+  onOpenFeedback,
+  feedbackZero
+}) {
+  return /*#__PURE__*/React.createElement(EmptyScreen, {
+    title: "Home"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '0 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 24
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: "12px"
+    }
+  }, /*#__PURE__*/React.createElement(SalesCardG2, {
+    onOpenDetails: onOpenSalesDetails,
+    detailMode: detailMode
+  }), /*#__PURE__*/React.createElement(LiveSalesCard, {
+    onTap: onOpenLiveToday
+  })), /*#__PURE__*/React.createElement(HomeDashboardCards, {
+    onInventoryTap: onOpenInventoryDetails,
+    onScansTap: onOpenScansSubpage,
+    onOpenHighPricingAlerts: onOpenHighPricingAlerts,
+    onOpenGlobalMinReach: onOpenGlobalMinReach,
+    onOpenFeedback: onOpenFeedback,
+    feedbackZero: feedbackZero
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 32
+    }
+  })));
+}
+function OrdersScreen({
+  onOpenOrder
+}) {
+  return /*#__PURE__*/React.createElement(OrdersScreenV2, {
+    onOpenOrder: onOpenOrder
+  });
+}
+function ScanScreen({
+  onOpenLocalDb,
+  onOpenTriggers,
+  onOpenSettings,
+  onLaunchSession,
+  buyCost,
+  localDbUpdatedAt
+}) {
+  return /*#__PURE__*/React.createElement(ScanScreenV2, {
+    onOpenLocalDb: onOpenLocalDb,
+    onOpenTriggers: onOpenTriggers,
+    onOpenSettings: onOpenSettings,
+    onLaunchSession: onLaunchSession,
+    buyCost: buyCost,
+    localDbUpdatedAt: localDbUpdatedAt
+  });
+}
+function MoreScreen({
+  onOverlay,
+  initialPage
+}) {
+  return /*#__PURE__*/React.createElement(MoreScreenV2, {
+    onOverlay: onOverlay,
+    initialPage: initialPage
+  });
+}
+Object.assign(window, {
+  EmptyScreen,
+  HomeScreen,
+  OrdersScreen,
+  ScanScreen,
+  MoreScreen
+});;
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "palette": ["#D97757", "#29261b", "#f6f4ef"],
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        options={['#D97757', '#2A6FDB', '#1F8A5B', '#7A5AE0']}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakColor  label="Palette" value={t.palette}
+//                        options={[['#D97757', '#29261b', '#f6f4ef'],
+//                                  ['#475569', '#0f172a', '#f1f5f9']]}
+//                        onChange={(v) => setTweak('palette', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-lbl{position:relative}
+  .twk-i{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;margin-left:5px;border-radius:50%;
+    border:1px solid currentColor;font:italic 600 9px/1 Georgia,'Times New Roman',serif;opacity:.42;cursor:help;vertical-align:1px;box-sizing:border-box}
+  .twk-i:hover{opacity:.85}
+  .twk-tip{display:none;position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:20;padding:8px 10px;border-radius:9px;
+    background:#1f1f23;color:#fff;font:400 11.5px/1.4 -apple-system,BlinkMacSystemFont,'Inter',sans-serif;letter-spacing:0;
+    box-shadow:0 6px 20px rgba(0,0,0,.22);pointer-events:none;white-space:normal;text-transform:none}
+  .twk-i:hover+.twk-tip{display:block}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg-dense button{padding-left:2px!important;padding-right:2px!important;white-space:nowrap}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;box-sizing:border-box;min-width:0;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+
+  .twk-chips{display:flex;gap:6px}
+  .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+    padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+    transition:transform .12s cubic-bezier(.3,.7,.4,1),box-shadow .12s}
+  .twk-chip:hover{transform:translateY(-1px);
+    box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+  .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.15)}
+  .twk-chip>span{position:absolute;top:0;bottom:0;right:0;width:34%;
+    display:flex;flex-direction:column;box-shadow:-1px 0 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i{flex:1;box-shadow:0 -1px 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i:first-child{box-shadow:none}
+  .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  // Playground: tweak choices are remembered per page in this browser (the design project kept them in the file)
+  const key = 'bzpg.tweaks.' + (location.hash.slice(1) || 'main-app');
+  const [values, setValues] = React.useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(key) || 'null');
+      return s ? {
+        ...defaults,
+        ...s
+      } : defaults;
+    } catch (e) {
+      return defaults;
+    }
+  });
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(values));
+    } catch (e) {}
+  }, [values]);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null ? keyOrEdits : {
+      [keyOrEdits]: val
+    };
+    setValues(prev => ({
+      ...prev,
+      ...edits
+    }));
+    window.parent.postMessage({
+      type: '__edit_mode_set_keys',
+      edits
+    }, '*');
+    // Same-window signal so in-page listeners (deck-stage rail thumbnails)
+    // can react — the parent message only reaches the host, not peers.
+    window.dispatchEvent(new CustomEvent('tweakchange', {
+      detail: edits
+    }));
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({
+  title = 'Tweaks',
+  children
+}) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({
+    x: 16,
+    y: 16
+  });
+  const PAD = 16;
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth,
+      h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y))
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+  React.useEffect(() => {
+    const onMsg = e => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({
+      type: '__edit_mode_available'
+    }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({
+      type: '__edit_mode_dismissed'
+    }, '*');
+  };
+  const onDragStart = e => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX,
+      sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = ev => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy)
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+  if (!open) return null;
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, __TWEAKS_STYLE), /*#__PURE__*/React.createElement("div", {
+    ref: dragRef,
+    className: "twk-panel",
+    "data-omelette-chrome": "",
+    style: {
+      right: offsetRef.current.x,
+      bottom: offsetRef.current.y
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "twk-hd",
+    onMouseDown: onDragStart
+  }, /*#__PURE__*/React.createElement("b", null, title), /*#__PURE__*/React.createElement("button", {
+    className: "twk-x",
+    "aria-label": "Close tweaks",
+    onMouseDown: e => e.stopPropagation(),
+    onClick: dismiss
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    className: "twk-body"
+  }, children)));
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({
+  label,
+  children
+}) {
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "twk-sect"
+  }, label), children);
+}
+function TweakRow({
+  label,
+  value,
+  children,
+  inline = false,
+  info
+}) {
+  // info: a short explanation shown when hovering the small i next to the name
+  return /*#__PURE__*/React.createElement("div", {
+    className: inline ? 'twk-row twk-row-h' : 'twk-row'
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "twk-lbl"
+  }, /*#__PURE__*/React.createElement("span", null, label, info && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    className: "twk-i",
+    "aria-label": info
+  }, "i"), /*#__PURE__*/React.createElement("span", {
+    className: "twk-tip",
+    role: "tooltip"
+  }, info))), value != null && /*#__PURE__*/React.createElement("span", {
+    className: "twk-val"
+  }, value)), children);
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({
+  label,
+  value,
+  min = 0,
+  max = 100,
+  step = 1,
+  unit = '',
+  onChange
+}) {
+  return /*#__PURE__*/React.createElement(TweakRow, {
+    label: label,
+    value: `${value}${unit}`
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    className: "twk-slider",
+    min: min,
+    max: max,
+    step: step,
+    value: value,
+    onChange: e => onChange(Number(e.target.value))
+  }));
+}
+function TweakToggle({
+  label,
+  value,
+  onChange
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "twk-row twk-row-h"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "twk-lbl"
+  }, /*#__PURE__*/React.createElement("span", null, label)), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "twk-toggle",
+    "data-on": value ? '1' : '0',
+    role: "switch",
+    "aria-checked": !!value,
+    onClick: () => onChange(!value)
+  }, /*#__PURE__*/React.createElement("i", null)));
+}
+function TweakRadio({
+  label,
+  value,
+  options,
+  onChange,
+  segments = false,
+  info
+}) {
+  // segments: keep it a segmented control (short labels, up to 5)
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  // Segments wrap mid-word once per-segment width runs out. The track is
+  // ~248px (280 panel − 28 body pad − 4 seg pad), each button loses 12px
+  // to its own padding, and 11.5px system-ui averages ~6.3px/char — so 2
+  // options fit ~16 chars each, 3 fit ~10. Past that (or >3 options), fall
+  // back to a dropdown rather than wrap.
+  const labelLen = o => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({
+    2: 16,
+    3: 10
+  }[options.length] ?? 0);
+  if (!fitsAsSegments && !segments) {
+    // <select> emits strings — map back to the original option value so the
+    // fallback stays type-preserving (numbers, booleans) like the segment path.
+    const resolve = s => {
+      const m = options.find(o => String(typeof o === 'object' ? o.value : o) === s);
+      return m === undefined ? s : typeof m === 'object' ? m.value : m;
+    };
+    return /*#__PURE__*/React.createElement(TweakSelect, {
+      label: label,
+      value: value,
+      options: options,
+      onChange: s => onChange(resolve(s))
+    });
+  }
+  const opts = options.map(o => typeof o === 'object' ? o : {
+    value: o,
+    label: o
+  });
+  const idx = Math.max(0, opts.findIndex(o => o.value === value));
+  const n = opts.length;
+  const segAt = clientX => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor((clientX - r.left - 2) / inner * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+  const onPointerDown = e => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = ev => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return /*#__PURE__*/React.createElement(TweakRow, {
+    label: label,
+    info: info
+  }, /*#__PURE__*/React.createElement("div", {
+    ref: trackRef,
+    role: "radiogroup",
+    onPointerDown: onPointerDown,
+    className: (dragging ? 'twk-seg dragging' : 'twk-seg') + (segments && options.length > 3 ? ' twk-seg-dense' : '')
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "twk-seg-thumb",
+    style: {
+      left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+      width: `calc((100% - 4px) / ${n})`
+    }
+  }), opts.map(o => /*#__PURE__*/React.createElement("button", {
+    key: o.value,
+    type: "button",
+    role: "radio",
+    "aria-checked": o.value === value
+  }, o.label))));
+}
+function TweakSelect({
+  label,
+  value,
+  options,
+  onChange
+}) {
+  return /*#__PURE__*/React.createElement(TweakRow, {
+    label: label
+  }, /*#__PURE__*/React.createElement("select", {
+    className: "twk-field",
+    value: value,
+    onChange: e => onChange(e.target.value)
+  }, options.map(o => {
+    const v = typeof o === 'object' ? o.value : o;
+    const l = typeof o === 'object' ? o.label : o;
+    return /*#__PURE__*/React.createElement("option", {
+      key: v,
+      value: v
+    }, l);
+  })));
+}
+function TweakText({
+  label,
+  value,
+  placeholder,
+  onChange
+}) {
+  return /*#__PURE__*/React.createElement(TweakRow, {
+    label: label
+  }, /*#__PURE__*/React.createElement("input", {
+    className: "twk-field",
+    type: "text",
+    value: value,
+    placeholder: placeholder,
+    onChange: e => onChange(e.target.value)
+  }));
+}
+function TweakNumber({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  unit = '',
+  onChange
+}) {
+  const clamp = n => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({
+    x: 0,
+    val: 0
+  });
+  const onScrubStart = e => {
+    e.preventDefault();
+    startRef.current = {
+      x: e.clientX,
+      val: value
+    };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = ev => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "twk-num"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "twk-num-lbl",
+    onPointerDown: onScrubStart
+  }, label), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: value,
+    min: min,
+    max: max,
+    step: step,
+    onChange: e => onChange(clamp(Number(e.target.value)))
+  }), unit && /*#__PURE__*/React.createElement("span", {
+    className: "twk-num-unit"
+  }, unit));
+}
+
+// Relative-luminance contrast pick — checkmarks drawn over a swatch need to
+// read on both #111 and #fafafa without per-option configuration. Hex input
+// only (#rgb / #rrggbb); named or rgb()/hsl() colors fall through to "light".
+function __twkIsLight(hex) {
+  const h = String(hex).replace('#', '');
+  const x = h.length === 3 ? h.replace(/./g, c => c + c) : h.padEnd(6, '0');
+  const n = parseInt(x.slice(0, 6), 16);
+  if (Number.isNaN(n)) return true;
+  const r = n >> 16 & 255,
+    g = n >> 8 & 255,
+    b = n & 255;
+  return r * 299 + g * 587 + b * 114 > 148000;
+}
+const __TwkCheck = ({
+  light
+}) => /*#__PURE__*/React.createElement("svg", {
+  viewBox: "0 0 14 14",
+  "aria-hidden": "true"
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M3 7.2 5.8 10 11 4.2",
+  fill: "none",
+  strokeWidth: "2.2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  stroke: light ? 'rgba(0,0,0,.78)' : '#fff'
+}));
+
+// TweakColor — curated color/palette picker. Each option is either a single
+// hex string or an array of 1-5 hex strings; the card adapts — a lone color
+// renders solid, a palette renders colors[0] as the hero (left ~2/3) with the
+// rest stacked in a sharp column on the right. onChange emits the
+// option in the shape it was passed (string stays string, array stays array).
+// Without options it falls back to the native color input for back-compat.
+function TweakColor({
+  label,
+  value,
+  options,
+  onChange
+}) {
+  if (!options || !options.length) {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "twk-row twk-row-h"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "twk-lbl"
+    }, /*#__PURE__*/React.createElement("span", null, label)), /*#__PURE__*/React.createElement("input", {
+      type: "color",
+      className: "twk-swatch",
+      value: value,
+      onChange: e => onChange(e.target.value)
+    }));
+  }
+  // Native <input type=color> emits lowercase hex per the HTML spec, so
+  // compare case-insensitively. String() guards JSON.stringify(undefined),
+  // which returns the primitive undefined (no .toLowerCase).
+  const key = o => String(JSON.stringify(o)).toLowerCase();
+  const cur = key(value);
+  return /*#__PURE__*/React.createElement(TweakRow, {
+    label: label
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "twk-chips",
+    role: "radiogroup"
+  }, options.map((o, i) => {
+    const colors = Array.isArray(o) ? o : [o];
+    const [hero, ...rest] = colors;
+    const sup = rest.slice(0, 4);
+    const on = key(o) === cur;
+    return /*#__PURE__*/React.createElement("button", {
+      key: i,
+      type: "button",
+      className: "twk-chip",
+      role: "radio",
+      "aria-checked": on,
+      "data-on": on ? '1' : '0',
+      "aria-label": colors.join(', '),
+      title: colors.join(' · '),
+      style: {
+        background: hero
+      },
+      onClick: () => onChange(o)
+    }, sup.length > 0 && /*#__PURE__*/React.createElement("span", null, sup.map((c, j) => /*#__PURE__*/React.createElement("i", {
+      key: j,
+      style: {
+        background: c
+      }
+    }))), on && /*#__PURE__*/React.createElement(__TwkCheck, {
+      light: __twkIsLight(hero)
+    }));
+  })));
+}
+function TweakButton({
+  label,
+  onClick,
+  secondary = false
+}) {
+  return /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: secondary ? 'twk-btn secondary' : 'twk-btn',
+    onClick: onClick
+  }, label);
+}
+Object.assign(window, {
+  useTweaks,
+  TweaksPanel,
+  TweakSection,
+  TweakRow,
+  TweakSlider,
+  TweakToggle,
+  TweakRadio,
+  TweakSelect,
+  TweakText,
+  TweakNumber,
+  TweakColor,
+  TweakButton
+});;
+// app.jsx — Single interactive phone, with the Sales Details bottom sheet
+// and a Tweaks panel.
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "feedbackToday": "negatives",
+  "proScanTop": "v3",
+  "proScanDots": "asinR",
+  "scanLoad": "spot",
+  "device": "pro",
+  "result": "found",
+  "camStats": "bar"
+} /*EDITMODE-END*/;
+// Device (Tweaks): the phone's size in points
+const BZ_DEVICES = {
+  pro: ['iPhone 18 Pro', 402, 874, 'Pro'],
+  max: ['iPhone 18 Pro Max', 440, 956, 'P. Max'],
+  e: ['iPhone 17e', 390, 844, '17e'],
+  se: ['iPhone SE', 375, 667, 'SE'],
+  fit: ['Fit height', 402, 0, 'Fit']
+}; // [name, width, height, short label in Tweaks]
+// Fit height: an 18 Pro–wide phone as tall as the space under the top bar allows (so the whole phone shows without scrolling)
+function useBzDeviceSize(key) {
+  const avail = () => {
+    const s = document.getElementById('pscroll');
+    return s && s.clientHeight || window.innerHeight;
+  };
+  const [h, setH] = React.useState(avail);
+  React.useEffect(() => {
+    const on = () => setH(avail());
+    window.addEventListener('resize', on);
+    on();
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  const d = BZ_DEVICES[key] || BZ_DEVICES.pro;
+  return key === 'fit' ? [d[1], Math.max(560, h - 48)] : [d[1], d[2]];
+}
+
+// START_VIEW — where the phone opens on load. Points at the most recently
+// changed screen so the latest work shows first.
+//   tab: 'home' | 'orders' | 'scan' | 'more'
+//   morePage: More-tab subpage to open ('account' | 'chat' | 'news' | 'fees' | null)
+//   scanSession: 'pro' | 'legacy' | null (Scan tab only)
+//   orderOpen: open the first order's detail page (Orders tab only)
+//   camera: open Pro Scan's camera page (Scan tab, pro session)
+const START_VIEW = {
+  tab: 'scan',
+  morePage: null,
+  scanSession: 'pro',
+  orderOpen: false,
+  camera: false
+};
+window.__bzStart = START_VIEW;
+
+// On the phone test (window.PSTV_PHONE) the whole app fills the real screen: no drawn phone, no Tweaks panel.
+const BZ_ON_PHONE = !!window.PSTV_PHONE;
+function BzBareFrame({
+  children
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      overflow: 'hidden',
+      background: '#F2F2F7',
+      fontFamily: '-apple-system, system-ui, sans-serif',
+      WebkitFontSmoothing: 'antialiased'
+    }
+  }, children);
+}
+if (BZ_ON_PHONE) window.PSTV_PHONE.onNewItem = () => window.dispatchEvent(new CustomEvent('bz:new-item')); // the shuffle button on the Pro Scan bar
+// phone test, first visit: start with a scanned book on the Pro Scan page instead of the empty state
+if (BZ_ON_PHONE) setTimeout(() => {
+  let had = null;
+  try {
+    had = localStorage.getItem('bzpg.lastScan');
+  } catch (e) {}
+  if (!had) window.dispatchEvent(new CustomEvent('bz:new-item'));
+}, 900);
+
+// Tab order in the tab bar — decides which side a new tab slides in from.
+const TAB_ORDER = ['home', 'orders', 'scan', 'more'];
+function Phone({
+  tweaks
+}) {
+  const [devW, devH] = useBzDeviceSize(tweaks.device);
+  const [tab, setTabRaw] = React.useState(START_VIEW.tab);
+  // Tab transition: { dir: 'R' | 'L', seq } — null on first load (no animation).
+  const [tabAnim, setTabAnim] = React.useState(null);
+  const setTab = next => {
+    if (next === tab) return;
+    const dir = TAB_ORDER.indexOf(next) > TAB_ORDER.indexOf(tab) ? 'R' : 'L';
+    setTabAnim(a => ({
+      dir,
+      seq: a ? a.seq + 1 : 0
+    }));
+    setTabRaw(next);
+  };
+  const tabAnimation = tabAnim ? `bzTabIn${tabAnim.dir}${tabAnim.seq % 2} ${BZ_TAB_EASE}` : 'none';
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [detailsPeriod, setDetailsPeriod] = React.useState('W');
+  // Item-details page starts closed — opens only when a card is tapped.
+  const [activeOrder, setActiveOrder] = React.useState(() => window.ORDERS_LIST && window.ORDERS_LIST[0] || null);
+  const [orderOpen, setOrderOpen] = React.useState(!!START_VIEW.orderOpen);
+  // Today's-revenue bottom sheet — shared between the Home tab's
+  // "Live today" card and the Orders tab's revenue chip.  Both call
+  // openTodayRevenue to surface it.
+  const [todayRevenueOpen, setTodayRevenueOpen] = React.useState(false);
+  // Inventory details bottom sheet — opens from the Home inventory card.
+  const [inventoryDetailsOpen, setInventoryDetailsOpen] = React.useState(false);
+  // Scans subpage — slide-in full-page view from the Home Scans card.
+  const [scansSubpageOpen, setScansSubpageOpen] = React.useState(false);
+  // High Pricing Alerts subpage — opens from the Home pricing card's
+  // "High Pricing Alerts" row.
+  const [hpaOpen, setHpaOpen] = React.useState(false);
+  // Global Min Reach subpage — opens from the Home pricing card's
+  // "Global Min Reach" row.
+  const [gmrOpen, setGmrOpen] = React.useState(false);
+  // Feedback subpage — opens from the Home Feedback card.
+  const [feedbackOpen, setFeedbackOpen] = React.useState(false);
+  // Local Database subpage — opens from the Scanner "Local Database" row.
+  // Timestamp lives here so a successful update reflects on the Scanner row.
+  const [localDbOpen, setLocalDbOpen] = React.useState(false);
+  // Triggers subpage — opens from the Scanner "Triggers" row.
+  const [triggersOpen, setTriggersOpen] = React.useState(false);
+  // Scan Settings subpage — opens from the Scanner "Scan Settings" row.
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  // True while a focused More-tab editor (Device name) is open — hides the tab bar.
+  const [moreOverlay, setMoreOverlay] = React.useState(false);
+  // Scan session — opened by the big Scan button; mode picks the page.
+  const [scanSession, setScanSession] = React.useState(START_VIEW.scanSession); // 'legacy' | 'pro' | null
+  // Default Buy Cost — persisted across sessions (propagates to the
+  // Scanner row subtitle).
+  const [buyCost, setBuyCost] = React.useState(() => {
+    const saved = parseFloat(localStorage.getItem('bookzy.buyCost'));
+    return isNaN(saved) ? 2.00 : saved;
+  });
+  const changeBuyCost = v => {
+    setBuyCost(v);
+    try {
+      localStorage.setItem('bookzy.buyCost', String(v));
+    } catch (e) {}
+  };
+  const [dbUpdatedAt, setDbUpdatedAt] = React.useState(SCAN_DEFAULTS.localDbUpdatedAt);
+  const openDetails = period => {
+    setDetailsPeriod(period);
+    setDetailsOpen(true);
+  };
+  const closeDetails = () => setDetailsOpen(false);
+  const openOrder = order => {
+    setActiveOrder(order);
+    setOrderOpen(true);
+  };
+  const closeOrder = () => setOrderOpen(false);
+  const openTodayRevenue = () => setTodayRevenueOpen(true);
+  const closeTodayRevenue = () => setTodayRevenueOpen(false);
+  const openInventoryDetails = () => setInventoryDetailsOpen(true);
+  const closeInventoryDetails = () => setInventoryDetailsOpen(false);
+  const openScansSubpage = () => setScansSubpageOpen(true);
+  const closeScansSubpage = () => setScansSubpageOpen(false);
+  const openHpa = () => setHpaOpen(true);
+  const closeHpa = () => setHpaOpen(false);
+  const openGmr = () => setGmrOpen(true);
+  const closeGmr = () => setGmrOpen(false);
+  const openFeedback = () => setFeedbackOpen(true);
+  const closeFeedback = () => setFeedbackOpen(false);
+  const openLocalDb = () => setLocalDbOpen(true);
+  const closeLocalDb = () => setLocalDbOpen(false);
+  const openTriggers = () => setTriggersOpen(true);
+  const closeTriggers = () => setTriggersOpen(false);
+  const openSettings = () => setSettingsOpen(true);
+  const closeSettings = () => setSettingsOpen(false);
+  const launchScanSession = mode => setScanSession(mode === 'pro' ? 'pro' : 'legacy');
+  const closeScanSession = () => setScanSession(null);
+  const isPage = false; // Sales details always open as a bottom sheet (the full-page tweak was removed)
+
+  // Left-edge swipe = Back, everywhere, the iOS way: the drag starts within 28px of the left edge; the page on top FOLLOWS the finger;
+  // on release it finishes going back if it was dragged past about a third of the screen or flicked, otherwise it slides home again.
+  // The page that moves is the one whose Back button is on top; going back is that button's own action.
+  const frameRef = React.useRef(null),
+    backRef = React.useRef(null);
+  const closeTop = () => {
+    if (tab === 'scan' && scanSession) return closeScanSession();
+    if (tab === 'scan' && settingsOpen) return closeSettings();
+    if (tab === 'scan' && triggersOpen) return closeTriggers();
+    if (tab === 'scan' && localDbOpen) return closeLocalDb();
+    if (tab === 'orders' && orderOpen) return closeOrder();
+    if (tab === 'home' && feedbackOpen) return closeFeedback();
+    if (tab === 'home' && gmrOpen) return closeGmr();
+    if (tab === 'home' && hpaOpen) return closeHpa();
+    if (tab === 'home' && scansSubpageOpen) return closeScansSubpage();
+  };
+  const topBack = () => {
+    // the Back button of the page on top, and the page element it belongs to
+    const root = frameRef.current;
+    if (!root) return null;
+    const fr = root.getBoundingClientRect();
+    const hits = [...root.querySelectorAll('[aria-label="Back"], [data-bz-back]')].filter(el => {
+      const r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) return false;
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !!top && (el === top || el.contains(top));
+    });
+    const btn = hits[hits.length - 1];
+    if (!btn) return null;
+    let page = null;
+    for (let a = btn.parentElement; a && a !== root; a = a.parentElement) {
+      const r = a.getBoundingClientRect(),
+        p = getComputedStyle(a).position;
+      if ((p === 'absolute' || p === 'fixed') && r.width >= fr.width - 2 && r.height >= fr.height - 2) {
+        page = a;
+        break;
+      }
+    }
+    return {
+      btn,
+      page,
+      w: fr.width
+    };
+  };
+  const backStart = (x, y) => {
+    const el = frameRef.current;
+    if (!el || backRef.current && backRef.current.busy) return;
+    const b = el.getBoundingClientRect();
+    backRef.current = x - b.left <= 28 ? {
+      x,
+      y,
+      lx: x,
+      lt: performance.now(),
+      v: 0,
+      dx: 0,
+      on: false,
+      t: null
+    } : null;
+  };
+  const backMove = (x, y) => {
+    const st = backRef.current;
+    if (!st || st.busy) return;
+    const dx = x - st.x,
+      dy = y - st.y;
+    if (!st.on) {
+      if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
+        backRef.current = null;
+        return;
+      } // a scroll, not a swipe
+      if (dx < 8 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      st.on = true;
+      st.t = topBack();
+      if (st.t && st.t.page) {
+        const p = st.t.page;
+        st.prevT = p.style.transition;
+        st.prevSh = p.style.boxShadow;
+        p.style.transition = 'none';
+        p.style.boxShadow = '-10px 0 30px rgba(15,15,20,0.14)';
+      }
+    }
+    const now = performance.now();
+    if (now - st.lt > 0) st.v = 0.7 * ((x - st.lx) / (now - st.lt)) + 0.3 * st.v;
+    st.lx = x;
+    st.lt = now;
+    st.dx = Math.max(0, dx);
+    if (st.t && st.t.page) st.t.page.style.translate = st.dx + 'px 0px';
+  };
+  const backEnd = () => {
+    const st = backRef.current;
+    if (!st || st.busy) return;
+    if (!st.on) {
+      backRef.current = null;
+      return;
+    }
+    const t = st.t,
+      w = t && t.w || 400,
+      go = st.dx > w * 0.33 || st.v > 0.45 && st.dx > 24;
+    if (!t || !t.page) {
+      backRef.current = null;
+      if (go) {
+        if (t) t.btn.click();else closeTop();
+      }
+      return;
+    } // no page to move: just go back
+    const p = t.page;
+    st.busy = true;
+    const rest = go ? w - st.dx : st.dx,
+      ms = Math.max(140, Math.min(320, rest / Math.max(0.6, Math.abs(st.v))));
+    p.style.transition = 'translate ' + ms + 'ms cubic-bezier(.2,.75,.25,1)';
+    p.style.translate = (go ? w : 0) + 'px 0px';
+    setTimeout(() => {
+      if (go) t.btn.click();
+      setTimeout(() => {
+        p.style.transition = st.prevT || '';
+        p.style.boxShadow = st.prevSh || '';
+        p.style.translate = '';
+        backRef.current = null;
+      }, go ? 460 : 0);
+    }, ms + 10);
+  };
+  const Frame = BZ_ON_PHONE ? BzBareFrame : IOSDevice;
+  const screen = tab === 'home' ? /*#__PURE__*/React.createElement(HomeScreen, {
+    onOpenSalesDetails: openDetails,
+    detailMode: "sheet",
+    onOpenLiveToday: openTodayRevenue,
+    onOpenInventoryDetails: openInventoryDetails,
+    onOpenScansSubpage: openScansSubpage,
+    onOpenHighPricingAlerts: openHpa,
+    onOpenGlobalMinReach: openGmr,
+    onOpenFeedback: openFeedback,
+    feedbackZero: tweaks.feedbackToday === 'zero'
+  }) : tab === 'orders' ? /*#__PURE__*/React.createElement(OrdersScreen, {
+    onOpenOrder: openOrder,
+    onOpenTodayRevenue: openTodayRevenue,
+    todayRevenueOpen: todayRevenueOpen,
+    onCloseTodayRevenue: closeTodayRevenue
+  }) : tab === 'scan' ? /*#__PURE__*/React.createElement(ScanScreen, {
+    onOpenLocalDb: openLocalDb,
+    onOpenTriggers: openTriggers,
+    onOpenSettings: openSettings,
+    onLaunchSession: launchScanSession,
+    buyCost: buyCost,
+    localDbUpdatedAt: dbUpdatedAt
+  }) : /*#__PURE__*/React.createElement(MoreScreen, {
+    onOverlay: setMoreOverlay,
+    initialPage: START_VIEW.morePage
+  });
+  return /*#__PURE__*/React.createElement(Frame, {
+    width: devW,
+    height: devH
+  }, /*#__PURE__*/React.createElement("div", {
+    ref: frameRef,
+    style: {
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      overflow: 'hidden'
+    },
+    onTouchStart: e => backStart(e.touches[0].clientX, e.touches[0].clientY),
+    onTouchMove: e => backMove(e.touches[0].clientX, e.touches[0].clientY),
+    onTouchEnd: backEnd,
+    onTouchCancel: backEnd,
+    onMouseDown: e => backStart(e.clientX, e.clientY),
+    onMouseMove: e => {
+      if (e.buttons) backMove(e.clientX, e.clientY);
+    },
+    onMouseUp: backEnd
+  }, /*#__PURE__*/React.createElement("div", {
+    key: tab,
+    className: "bz-motion",
+    style: {
+      position: 'absolute',
+      inset: 0,
+      animation: tabAnimation
+    }
+  }, screen), !isPage && /*#__PURE__*/React.createElement(SalesDetailsSheet, {
+    open: detailsOpen,
+    initialPeriod: detailsPeriod,
+    onClose: closeDetails,
+    onPeriodSync: setDetailsPeriod
+  }), isPage && /*#__PURE__*/React.createElement(SalesDetailsPage, {
+    open: detailsOpen,
+    initialPeriod: detailsPeriod,
+    onClose: closeDetails,
+    onPeriodSync: setDetailsPeriod
+  }), /*#__PURE__*/React.createElement(OrderDetailPage, {
+    open: orderOpen && tab === 'orders',
+    order: activeOrder,
+    onClose: closeOrder
+  }), /*#__PURE__*/React.createElement(OrdersRevenueSheet, {
+    open: todayRevenueOpen && tab === 'home',
+    onClose: closeTodayRevenue
+  }), /*#__PURE__*/React.createElement(InventoryDetailsSheet, {
+    open: inventoryDetailsOpen && tab === 'home',
+    onClose: closeInventoryDetails
+  }), /*#__PURE__*/React.createElement(ScansDeviceSubpage, {
+    open: scansSubpageOpen && tab === 'home',
+    onClose: closeScansSubpage
+  }), /*#__PURE__*/React.createElement(HighPricingAlertsSubpage, {
+    open: hpaOpen && tab === 'home',
+    onClose: closeHpa,
+    showSlider: true
+  }), /*#__PURE__*/React.createElement(GlobalMinReachSubpage, {
+    open: gmrOpen && tab === 'home',
+    onClose: closeGmr,
+    showSlider: true
+  }), /*#__PURE__*/React.createElement(FeedbackSubpage, {
+    open: feedbackOpen && tab === 'home',
+    onClose: closeFeedback,
+    zero: tweaks.feedbackToday === 'zero'
+  }), /*#__PURE__*/React.createElement(LocalDatabaseSubpage, {
+    open: localDbOpen && tab === 'scan',
+    onClose: closeLocalDb,
+    updatedAt: dbUpdatedAt,
+    onUpdated: () => setDbUpdatedAt('Just now')
+  }), /*#__PURE__*/React.createElement(TriggersSubpage, {
+    open: triggersOpen && tab === 'scan',
+    onClose: closeTriggers
+  }), /*#__PURE__*/React.createElement(ScanSettingsSubpage, {
+    open: settingsOpen && tab === 'scan',
+    onClose: closeSettings,
+    buyCost: buyCost,
+    onBuyCostChange: changeBuyCost
+  }), /*#__PURE__*/React.createElement(LegacyScanSubpage, {
+    open: scanSession === 'legacy' && tab === 'scan',
+    onClose: closeScanSession
+  }), /*#__PURE__*/React.createElement(ProScanSubpage, {
+    open: scanSession === 'pro' && tab === 'scan',
+    onClose: closeScanSession
+  }), (!isPage || !detailsOpen) && !(orderOpen && tab === 'orders') && !scansSubpageOpen && !hpaOpen && !gmrOpen && !feedbackOpen && !localDbOpen && !triggersOpen && !settingsOpen && !(moreOverlay && tab === 'more') && !scanSession && /*#__PURE__*/React.createElement(TabBar, {
+    active: tab,
+    onChange: setTab
+  })));
+}
+function BookzyTweaks({
+  tweaks,
+  setTweak
+}) {
+  return /*#__PURE__*/React.createElement(TweaksPanel, {
+    title: "Tweaks"
+  }, /*#__PURE__*/React.createElement(TweakRadio, {
+    label: "Device size",
+    info: "The phone the design is shown on. Fit scales it to the height of your window.",
+    value: tweaks.device || 'pro',
+    segments: true,
+    options: Object.keys(BZ_DEVICES).map(k => ({
+      value: k,
+      label: BZ_DEVICES[k][3]
+    })),
+    onChange: v => setTweak('device', v)
+  }), /*#__PURE__*/React.createElement(TweakRadio, {
+    label: "Result",
+    info: "What the next New item loads: a found book, one of the three not-found states, or a random mix. Picking one loads it right away.",
+    value: tweaks.result || 'found',
+    segments: true,
+    options: [{
+      value: 'found',
+      label: 'Found'
+    }, {
+      value: 'offline',
+      label: 'Offline'
+    }, {
+      value: 'nolisting',
+      label: 'Unlisted'
+    }, {
+      value: 'invalid',
+      label: 'Invalid'
+    }, {
+      value: 'random',
+      label: 'Random'
+    }],
+    onChange: v => {
+      setTweak('result', v);
+      setTimeout(() => window.dispatchEvent(new CustomEvent('bz:new-item')), 60);
+    }
+  }), /*#__PURE__*/React.createElement(TweakRadio, {
+    label: "Pro Scan versions",
+    info: "Which design of the Pro Scan page (and the top of the camera page) is shown. V3 is the newest.",
+    value: tweaks.proScanTop,
+    options: [{
+      value: 'current',
+      label: 'V1'
+    }, {
+      value: 'a11',
+      label: 'V2'
+    }, {
+      value: 'v3',
+      label: 'V3'
+    }],
+    onChange: v => setTweak('proScanTop', v)
+  }), /*#__PURE__*/React.createElement(TweakRadio, {
+    label: "Camera stats",
+    info: "How ASR, Sold days and Profit are drawn on top of the camera. Original: three see-through chips. Bar: solid dark, ASR and Sold days together.",
+    value: tweaks.camStats === 'glass' ? 'glass' : 'bar',
+    segments: true,
+    options: [{
+      value: 'glass',
+      label: 'Original'
+    }, {
+      value: 'bar',
+      label: 'Bar'
+    }],
+    onChange: v => setTweak('camStats', v)
+  }));
+}
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  // Pro Scan reads its color tweaks from here at render time.
+  window.__bzTweaks = {
+    ...tweaks,
+    scanFound: 'frame',
+    scanLoad: 'spot'
+  }; // Loading time (camera): Spotlight (decided 18 Nov 2026, no longer a tweak) · // Found moment: Frame (decided 17 Nov 2026, no longer a tweak)
+  if (BZ_ON_PHONE) return /*#__PURE__*/React.createElement(Phone, {
+    tweaks: tweaks
+  }); // phone test: the app itself, edge to edge
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: '100%',
+      minHeight: '100%',
+      /* fills the visible area under the top bar (100vh would add a scroll) */
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px 16px',
+      boxSizing: 'border-box',
+      background: 'var(--page-bg, #ECEBE8)' /* the artifact's own grey from the first frame (was a bluish #EFEFF4 that flashed before the shell repainted it) */
+    }
+  }, /*#__PURE__*/React.createElement(Phone, {
+    tweaks: tweaks
+  }), /*#__PURE__*/React.createElement(BookzyTweaks, {
+    tweaks: tweaks,
+    setTweak: setTweak
+  }));
+}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(/*#__PURE__*/React.createElement(App, null));
