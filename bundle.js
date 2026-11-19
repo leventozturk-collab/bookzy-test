@@ -684,9 +684,31 @@ function IconBox({
     width: size,
     height: size,
     viewBox: "0 0 24 24",
-    fill: color
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M12 2L3 6.6v10.8L12 22l9-4.6V6.6L12 2zm0 2.3l6.3 3.2L12 10.7 5.7 7.5 12 4.3zM4.8 9l6.4 3.3v7.6L4.8 16.6V9zm14.4 0v7.6l-6.4 3.3v-7.6L19.2 9z"
+    fill: "none"
+  }, /*#__PURE__*/React.createElement("mask", {
+    id: "bz-box-cut",
+    maskUnits: "userSpaceOnUse",
+    x: "0",
+    y: "0",
+    width: "24",
+    height: "24"
+  }, /*#__PURE__*/React.createElement("rect", {
+    width: "24",
+    height: "24",
+    fill: "#fff"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M3.4 6.9L12 11.3l8.6-4.4M12 11.3V21.6",
+    stroke: "#000",
+    strokeWidth: "1.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  })), /*#__PURE__*/React.createElement("path", {
+    mask: "url(#bz-box-cut)",
+    d: "M12 2.7L3.5 7v10L12 21.3 20.5 17V7L12 2.7z",
+    fill: color,
+    stroke: color,
+    strokeWidth: "1.7",
+    strokeLinejoin: "round"
   }));
   return /*#__PURE__*/React.createElement("svg", {
     width: size,
@@ -711,13 +733,47 @@ function IconScan({
   filled = false
 }) {
   // Viewfinder with corner ticks + middle bar (barcode.viewfinder vibe)
-  return /*#__PURE__*/React.createElement("svg", {
+  return filled ?
+  /*#__PURE__*/
+  // selected (S1): a solid rounded square with the frame and bar cut out of it
+  React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24"
+  }, /*#__PURE__*/React.createElement("mask", {
+    id: "bz-scan-cut",
+    maskUnits: "userSpaceOnUse",
+    x: "0",
+    y: "0",
+    width: "24",
+    height: "24"
+  }, /*#__PURE__*/React.createElement("rect", {
+    width: "24",
+    height: "24",
+    fill: "#fff"
+  }), /*#__PURE__*/React.createElement("g", {
+    fill: "none",
+    stroke: "#000",
+    strokeWidth: "1.6",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M6.6 9.4V7.9a1.3 1.3 0 011.3-1.3h1.5M14.6 6.6h1.5a1.3 1.3 0 011.3 1.3v1.5M17.4 14.6v1.5a1.3 1.3 0 01-1.3 1.3h-1.5M9.4 17.4H7.9a1.3 1.3 0 01-1.3-1.3v-1.5M8.6 12h6.8"
+  }))), /*#__PURE__*/React.createElement("rect", {
+    x: "2.2",
+    y: "2.2",
+    width: "19.6",
+    height: "19.6",
+    rx: "5.4",
+    fill: color,
+    mask: "url(#bz-scan-cut)"
+  })) : /*#__PURE__*/React.createElement("svg", {
     width: size,
     height: size,
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: color,
-    strokeWidth: filled ? 2.2 : 1.7,
+    strokeWidth: "1.7",
     strokeLinecap: "round",
     strokeLinejoin: "round"
   }, /*#__PURE__*/React.createElement("path", {
@@ -737,6 +793,49 @@ function IconEllipsis({
   color = 'currentColor',
   filled = false
 }) {
+  if (filled) return (
+    /*#__PURE__*/
+    // selected (M2): a solid capsule with the three dots cut out
+    React.createElement("svg", {
+      width: size,
+      height: size,
+      viewBox: "0 0 24 24"
+    }, /*#__PURE__*/React.createElement("mask", {
+      id: "bz-more-cut",
+      maskUnits: "userSpaceOnUse",
+      x: "0",
+      y: "0",
+      width: "24",
+      height: "24"
+    }, /*#__PURE__*/React.createElement("rect", {
+      width: "24",
+      height: "24",
+      fill: "#fff"
+    }), /*#__PURE__*/React.createElement("circle", {
+      cx: "7",
+      cy: "12",
+      r: "1.5",
+      fill: "#000"
+    }), /*#__PURE__*/React.createElement("circle", {
+      cx: "12",
+      cy: "12",
+      r: "1.5",
+      fill: "#000"
+    }), /*#__PURE__*/React.createElement("circle", {
+      cx: "17",
+      cy: "12",
+      r: "1.5",
+      fill: "#000"
+    })), /*#__PURE__*/React.createElement("rect", {
+      x: "2",
+      y: "6.6",
+      width: "20",
+      height: "10.8",
+      rx: "5.4",
+      fill: color,
+      mask: "url(#bz-more-cut)"
+    }))
+  );
   return /*#__PURE__*/React.createElement("svg", {
     width: size,
     height: size,
@@ -1170,6 +1269,8 @@ Object.assign(window, {
     @keyframes bzTabInL1 { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
     @keyframes bzPopIn   { from { opacity: 0; transform: translateY(-6px) scale(0.97); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) { .bz-motion { animation: none !important; } }
+    /* a closed bottom sheet is parked just below the screen; its upward shadow used to leak in, and a dozen of them stacked into a dark band behind the tab bar */
+    [style*="-8px 32px"][style*="translateY(100%)"] { box-shadow: none !important; }
   `;
   document.head.appendChild(s);
 })();
@@ -1928,11 +2029,12 @@ function BzCheck({
     d: "M5 12.5l4.5 4.5L19 7"
   })));
 }
+// round buttons are 44px everywhere (18 Nov 2026): Apple's minimum touch size, the same as Slack's back button
 const BZ_ROUND_BTN = {
   position: 'absolute',
-  top: 14,
-  width: 34,
-  height: 34,
+  top: 9,
+  width: 44,
+  height: 44,
   borderRadius: '50%',
   background: '#fff',
   border: 'none',
@@ -2173,13 +2275,15 @@ Object.assign(window, {
   SheetHeader
 });
 // ══ Press feedback — one system for the whole app (18 Nov 2026) ══
-// A phone app must answer every touch, and a finger hides anything that shrinks. So, following iOS 26:
-//   • buttons (back, camera, round icon buttons, sheet X, refresh, small pills, tab-bar items) GROW a little under the finger
-//     and spring back on release; while held and dragged they lean and stretch toward the finger (the "liquid" feel);
-//   • wide buttons (Search bar, Scan, any call-to-action) grow slightly and their background lightens / darkens;
-//   • rows and cells (offers in the table, settings rows, segment choices, text links) get a soft background highlight, as in iOS lists.
+// A phone app must answer every touch, and the answer has to be visible AROUND the finger. So there are two standards, picked by size:
+//   • ICON BUTTONS (up to 60px: back, camera, gear, full screen, sheet X, refresh, small chips) GROW under the finger and spring back;
+//     while held and dragged they lean and stretch toward the finger (the iOS 26 "liquid" feel). Shrinking would be hidden by the finger.
+//   • EVERYTHING BIGGER (rows, cards, wide buttons, the search bar, the big round Scan button) SHRINKS about 3% and its background
+//     highlights: it sticks out on both sides of the finger, so the push-in is visible. A row highlights edge to edge, clipped to its card.
+//   Two exceptions: the tab bar has its own sliding lens (tabbar.jsx), and plain text cells (prices in the offers table, text choices,
+//   links) only highlight, because one shrinking number in a grid looks like a glitch.
 // It works by itself on everything tappable (any element with a tap handler), so new screens get it without extra code.
-// Opt out with class "bz-nopress". Keys and buttons in the search sheet keep their own feedback (bv-*).
+// Opt out with class "bz-nopress". Keys and buttons in the search sheet keep their own feedback (bv-*), which follows the same idea.
 (function bzPressInstall() {
   if (typeof document === 'undefined' || window.__bzPress) return;
   window.__bzPress = true;
@@ -2225,25 +2329,46 @@ Object.assign(window, {
     const ownBg = alpha(cs.backgroundColor) > 0.2 || cs.backgroundImage && cs.backgroundImage !== 'none' || cs.backdropFilter && cs.backdropFilter !== 'none';
     const round = rad >= small * 0.4,
       icon = !!el.querySelector('svg, img');
-    let kind = 'row';
-    if (!inline && big <= 120 && (ownBg && round || icon && (ownBg || !/\S{1}/.test(el.textContent || '') || big <= 96))) kind = 'bubble';else if (!inline && ownBg && r.height <= 66 && rad >= 12) kind = 'cta';
-    const grow = reduce() ? 1 : kind === 'bubble' ? big <= 60 ? 1.14 : 1.08 : kind === 'cta' ? 1.03 : 1;
+    // which standard: bubble = grows · press = shrinks + highlights · cell = highlights only
+    const kind = inline || big <= 120 && !ownBg && !icon ? 'cell' : big <= 60 ? 'bubble' : 'press';
+    const grow = reduce() || kind === 'cell' ? 1 : kind === 'bubble' ? 1.14 : round && big <= 130 ? 0.95 : 0.97;
     const dark = lum(ownBg && alpha(cs.backgroundColor) > 0.5 ? cs.backgroundColor : backdrop(el)) < 0.4;
-    const tint = kind === 'bubble' ? dark ? 0.14 : 0.08 : kind === 'cta' ? dark ? 0.2 : 0.1 : dark ? 0.16 : 0.09;
-    // a square row that fills its card edge to edge (settings rows): highlight the whole row, clipped to the card's rounded corners
+    const tint = kind === 'bubble' ? dark ? 0.14 : 0.08 : ownBg ? dark ? 0.2 : 0.1 : dark ? 0.16 : 0.09;
+    // a row with no background of its own: highlight it across its whole card, edge to edge, clipped to the card's rounded corners
+    // (also when the row sits inside the card's side padding). The highlight stays put while the row's content shrinks.
     let clip = '',
-      fill = false;
-    if (kind === 'row' && !rad) for (let a = el.parentElement, i = 0; a && i < 6; a = a.parentElement, i++) {
+      fill = false,
+      box = {
+        left: r.left,
+        top: r.top,
+        width: r.width,
+        height: r.height
+      };
+    if (kind === 'press' && !ownBg) for (let a = el.parentElement, i = 0; a && i < 6; a = a.parentElement, i++) {
       const as = getComputedStyle(a),
         ar = parseFloat(as.borderTopLeftRadius) || 0;
       if (!ar) continue;
       const b = a.getBoundingClientRect();
-      if (r.width >= b.width - 2 && b.height <= 900) {
+      if (b.width >= r.width - 2 && b.width - r.width <= 56 && b.height <= 900) {
         fill = true;
-        clip = 'inset(' + (b.top - r.top) + 'px ' + (r.right - b.right) + 'px ' + (r.bottom - b.bottom) + 'px ' + (b.left - r.left) + 'px round ' + as.borderRadius + ')';
+        box = {
+          left: b.left,
+          top: r.top,
+          width: b.width,
+          height: r.height
+        };
+        clip = 'inset(' + (b.top - r.top) + 'px 0px ' + (r.bottom - b.bottom) + 'px 0px round ' + as.borderRadius + ')';
       }
       break;
     }
+    const lone = !fill && !ownBg && kind !== 'bubble'; // text cells, links, rows outside a card: a soft rounded highlight
+    const inset = lone && !rad && r.width > 200 ? 4 : 0;
+    if (inset) box = {
+      left: r.left + 4,
+      top: r.top + 2,
+      width: r.width - 8,
+      height: r.height - 4
+    };
     return {
       r,
       kind,
@@ -2251,8 +2376,9 @@ Object.assign(window, {
       tint,
       dark,
       clip,
-      radius: rad ? cs.borderRadius : kind === 'row' ? fill ? '0px' : '12px' : kind === 'bubble' ? big <= 60 ? '50%' : '16px' : '0px',
-      inset: !rad && !fill && kind === 'row' && r.width > 200 ? 4 : 0
+      box,
+      ovFixed: fill,
+      radius: fill ? '0px' : rad ? cs.borderRadius : kind === 'bubble' ? '50%' : '12px'
     };
   }
   let cur = null;
@@ -2261,7 +2387,7 @@ Object.assign(window, {
       st.el.style.scale = sx + ' ' + sy;
       st.el.style.translate = tx + 'px ' + ty + 'px';
     }
-    if (st.ov) {
+    if (st.ov && !st.c.ovFixed) {
       st.ov.style.scale = sx + ' ' + sy;
       st.ov.style.translate = tx + 'px ' + ty + 'px';
     }
@@ -2290,20 +2416,20 @@ Object.assign(window, {
     if (c.grow !== 1) el.style.transition = (st.prevT ? st.prevT + ', ' : '') + 'scale .16s cubic-bezier(.2,.8,.3,1), translate .16s cubic-bezier(.2,.8,.3,1)';
     if (c.tint) {
       const ov = st.ov = document.createElement('div');
-      ov.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483000;opacity:0;transition:opacity .12s ease-out, scale .16s cubic-bezier(.2,.8,.3,1), translate .16s cubic-bezier(.2,.8,.3,1);' + 'left:' + (c.r.left + c.inset) + 'px;top:' + (c.r.top + (c.inset ? 2 : 0)) + 'px;width:' + (c.r.width - c.inset * 2) + 'px;height:' + (c.r.height - (c.inset ? 4 : 0)) + 'px;border-radius:' + c.radius + ';' + 'background:' + (c.dark ? 'rgba(255,255,255,' + c.tint + ')' : 'rgba(60,60,67,' + c.tint + ')') + (c.clip ? ';clip-path:' + c.clip : '');
+      ov.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483000;opacity:0;transition:opacity .12s ease-out, scale .16s cubic-bezier(.2,.8,.3,1), translate .16s cubic-bezier(.2,.8,.3,1);' + 'left:' + c.box.left + 'px;top:' + c.box.top + 'px;width:' + c.box.width + 'px;height:' + c.box.height + 'px;border-radius:' + c.radius + ';' + 'background:' + (c.dark ? 'rgba(255,255,255,' + c.tint + ')' : 'rgba(60,60,67,' + c.tint + ')') + (c.clip ? ';clip-path:' + c.clip : '');
       document.body.appendChild(ov);
     }
-    // rows wait a moment before lighting up, so starting a scroll doesn't flash them (as iOS lists do)
+    // everything but icon buttons waits a moment before reacting, so starting a scroll doesn't flash it (as iOS lists do)
     const show = () => {
       if (st.done) return;
       if (st.ov) st.ov.style.opacity = '1';
       setShape(st, c.grow, c.grow, 0, 0);
     };
-    if (c.kind === 'row' && e.pointerType === 'touch') st.wait = setTimeout(show, 70);else requestAnimationFrame(show);
+    if (c.kind !== 'bubble' && e.pointerType === 'touch') st.wait = setTimeout(show, 70);else requestAnimationFrame(show);
   }
   function move(e) {
     const st = cur;
-    if (!st || st.done || st.c.grow === 1 || st.c.kind === 'row') return;
+    if (!st || st.done || st.c.kind !== 'bubble' || st.c.grow === 1) return; // only icon buttons lean toward the finger
     const dx = e.clientX - st.x0,
       dy = e.clientY - st.y0,
       d = Math.hypot(dx, dy);
@@ -2324,8 +2450,9 @@ Object.assign(window, {
     if (cur === st) cur = null;
     const held = performance.now() - st.t0,
       late = now ? 0 : Math.max(0, 130 - held); // a quick tap still shows for a beat
-    if (late && st.ov && st.c.kind === 'row') {
-      st.ov.style.opacity = '1';
+    if (late && st.c.kind !== 'bubble') {
+      if (st.ov) st.ov.style.opacity = '1';
+      setShape(st, st.c.grow, st.c.grow, 0, 0);
     }
     setTimeout(() => {
       const el = st.el,
@@ -2399,9 +2526,25 @@ function TabBar({
   // Hold and slide, as on iOS 26 tab bars (Slack, WhatsApp): while a finger is on the bar, the selection becomes a glass lens
   // that grows and follows the finger along the bar; the tab under it lights up; lifting the finger selects that tab.
   // The icons and labels themselves stay in place (nothing leans out of the bar).
-  const STEP = 84,
-    FIRST = 46; // tab centres, measured from the bar's left edge: 46, 130, 214, 298
   const barRef = React.useRef(null);
+  // the bar is as wide as the screen allows (22px from each side, as in the QA build) and the four tabs share it
+  const PAD = 5,
+    GAP = 4;
+  const [barW, setBarW] = React.useState(358);
+  React.useLayoutEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const m = () => setBarW(el.offsetWidth);
+    m();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(m);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const btnW = (barW - PAD * 2 - GAP * (tabs.length - 1)) / tabs.length,
+    STEP = btnW + GAP,
+    FIRST = PAD + btnW / 2,
+    TILE = Math.round(btnW - 18);
   const [drag, setDrag] = React.useState(null); // { x } while a finger is down
   const xOf = e => {
     const b = barRef.current.getBoundingClientRect();
@@ -2433,9 +2576,9 @@ function TabBar({
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
-      left: 12,
-      right: 12,
-      bottom: 28,
+      left: 22,
+      right: 22,
+      bottom: 26,
       zIndex: 30,
       display: 'flex',
       alignItems: 'center',
@@ -2453,29 +2596,31 @@ function TabBar({
       position: 'relative',
       display: 'flex',
       alignItems: 'center',
-      gap: 4,
-      padding: 6,
-      borderRadius: 28,
+      flex: 1,
+      maxWidth: 420,
+      gap: GAP,
+      padding: PAD,
+      borderRadius: 32,
       touchAction: 'none',
       userSelect: 'none',
       WebkitUserSelect: 'none',
-      boxShadow: dark ? '0 4px 12px rgba(0,0,0,0.45), 0 18px 40px rgba(0,0,0,0.35)' : '0 4px 14px rgba(15,15,20,0.06), 0 16px 40px rgba(15,15,20,0.10)',
+      boxShadow: dark ? '0 4px 12px rgba(0,0,0,0.45), 0 18px 40px rgba(0,0,0,0.35)' : '0 1px 3px rgba(15,15,20,0.04), 0 8px 24px rgba(15,15,20,0.08)',
       pointerEvents: 'auto'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
       inset: 0,
-      borderRadius: 28,
+      borderRadius: 32,
       backdropFilter: 'blur(22px) saturate(180%)',
       WebkitBackdropFilter: 'blur(22px) saturate(180%)',
-      background: dark ? 'rgba(28,28,32,0.62)' : 'rgba(255,255,255,0.72)'
+      background: dark ? 'rgba(28,28,32,0.62)' : 'rgba(250,250,252,0.78)'
     }
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
       inset: 0,
-      borderRadius: 28,
+      borderRadius: 32,
       border: dark ? '0.5px solid rgba(255,255,255,0.10)' : '0.5px solid rgba(0,0,0,0.05)',
       boxShadow: dark ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'inset 0 1px 0 rgba(255,255,255,0.7)',
       pointerEvents: 'none'
@@ -2483,11 +2628,11 @@ function TabBar({
   }), (activeIdx >= 0 || drag) && /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
-      top: 10,
-      left: 10,
-      width: 72,
-      height: 52,
-      borderRadius: drag ? 26 : 18,
+      top: PAD + 4,
+      left: FIRST - TILE / 2,
+      width: TILE,
+      height: 46,
+      borderRadius: drag ? 23 : 17,
       pointerEvents: 'none',
       zIndex: drag ? 2 : 0,
       // at rest: the soft tile. Held: a glass lens — bigger than the bar, clear, with a bright rim and a soft shadow
@@ -2516,8 +2661,9 @@ function TabBar({
         background: 'none',
         border: 'none',
         cursor: 'pointer',
-        width: 80,
-        height: 60,
+        flex: 1,
+        minWidth: 0,
+        height: 54,
         borderRadius: 22,
         display: 'flex',
         flexDirection: 'column',
@@ -11578,8 +11724,8 @@ function FloatingBackButton({
       top,
       left,
       zIndex: 10,
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: '50%',
       border: 'none',
       cursor: 'pointer',
@@ -13311,8 +13457,8 @@ function HPASIconButton({
     onClick: onTap,
     "aria-label": label,
     style: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: '50%',
       border: '1px solid rgba(60,60,67,0.08)',
       cursor: 'pointer',
@@ -13493,8 +13639,8 @@ function HPASCombinedButton({
     "aria-label": "Sort and filter",
     style: {
       position: 'relative',
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: '50%',
       border: '1px solid rgba(60,60,67,0.08)',
       cursor: 'pointer',
@@ -14462,8 +14608,8 @@ function HPASSubHeader({
       left: 16,
       top: '50%',
       transform: 'translateY(-50%)',
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: '50%',
       border: '1px solid rgba(60,60,67,0.08)',
       cursor: 'pointer',
@@ -14737,8 +14883,8 @@ function HPASPricingSheet({
     onClick: () => setMode('main'),
     "aria-label": "Back",
     style: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: '50%',
       flexShrink: 0,
       border: '1px solid rgba(60,60,67,0.08)',
@@ -14817,8 +14963,8 @@ function HPASPricingSheet({
     onClick: onClose,
     "aria-label": "Close",
     style: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: '50%',
       flexShrink: 0,
       border: '1px solid rgba(60,60,67,0.08)',
@@ -15836,8 +15982,8 @@ function RepricerAlertDetailPage({
     onClick: () => setMenuOpen(o => !o),
     "aria-label": "More",
     style: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: '50%',
       border: '1px solid rgba(60,60,67,0.08)',
       cursor: 'pointer',
@@ -22910,8 +23056,8 @@ function OrderBackButton({
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: 999,
       border: 'none',
       cursor: 'pointer',
@@ -24893,8 +25039,8 @@ function FilterTrigger({
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       border: active ? 'none' : '1px solid rgba(60,60,67,0.08)',
       cursor: 'pointer',
       borderRadius: 999,
@@ -24961,8 +25107,8 @@ function OrdersSortFilterButton({
     "aria-label": "Sort and filter",
     style: {
       position: 'relative',
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: '50%',
       border: '1px solid rgba(60,60,67,0.08)',
       cursor: 'pointer',
@@ -26157,10 +26303,10 @@ function ScanBeta({
       borderRadius: 999,
       background: onDark ? 'rgba(255,255,255,0.22)' : 'rgba(175,82,222,0.16)',
       color: onDark ? '#fff' : '#7E2FB8',
-      fontSize: 9.5,
-      fontWeight: 700,
-      letterSpacing: 0.2,
-      textTransform: 'uppercase'
+      fontSize: 11,
+      fontWeight: 600,
+      letterSpacing: 0,
+      padding: '2px 7px'
     }
   }, "Beta");
 }
@@ -26176,33 +26322,32 @@ function ScanModeSegmented({
       onClick: () => onChange(key),
       style: {
         flex: 1,
-        height: 40,
+        height: 32,
         padding: '0 10px',
-        borderRadius: 999,
+        borderRadius: 10,
         border: 'none',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
-        background: active ? TOKENS.text : 'transparent',
-        color: active ? '#fff' : TOKENS.textSecondary,
+        gap: 7,
+        background: active ? '#fff' : 'transparent',
+        boxShadow: active ? '0 1px 3px rgba(15,15,20,0.12), 0 1px 1px rgba(15,15,20,0.04)' : 'none',
+        color: active ? TOKENS.text : TOKENS.textSecondary,
         fontFamily: TOKENS.font,
-        fontSize: 13,
-        fontWeight: 600,
-        letterSpacing: -0.05,
-        transition: 'background 0.16s ease'
+        fontSize: 14.5,
+        fontWeight: active ? 600 : 500,
+        letterSpacing: -0.1,
+        transition: 'background 0.16s ease, box-shadow 0.16s ease'
       }
-    }, label, beta && /*#__PURE__*/React.createElement(ScanBeta, {
-      onDark: active
-    }));
+    }, label, beta && /*#__PURE__*/React.createElement(ScanBeta, null));
   };
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       padding: 3,
-      borderRadius: 999,
-      background: 'rgba(120,120,128,0.10)'
+      borderRadius: 13,
+      background: 'rgba(120,120,128,0.14)'
     }
   }, seg('legacy', 'Legacy', false), seg('pro', 'Pro', true));
 }
@@ -26528,7 +26673,7 @@ function ScanScreenV2({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      width: 248,
+      width: 228,
       alignSelf: 'center'
     }
   }, /*#__PURE__*/React.createElement(ScanModeSegmented, {
@@ -33754,8 +33899,8 @@ function KhRoundBtn({
     },
     title: title,
     style: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: 999,
       border: 'none',
       cursor: 'pointer',
@@ -34067,7 +34212,7 @@ function KeepaCompactSheet({
 
 // ── controller: owns shared state, renders both surfaces ──
 // Account-based chart preferences (shared across Pro Scan & Orders, persisted).
-const KEEPA_PREF_KEY = 'bookzy.keepaPrefs';
+const KEEPA_PREF_KEY = 'bookzy.keepaPrefs2'; // renamed 19 Nov 2026 so the new default (Lowest used price off) reaches everyone
 function keepaGetPrefs() {
   try {
     return JSON.parse(localStorage.getItem(KEEPA_PREF_KEY)) || {};
@@ -34091,7 +34236,7 @@ function KeepaHistory({
     sr: true,
     amz: true,
     new: true,
-    used: true
+    used: false
   });
   const [srFlip, setSrFlip] = React.useState(!!saved.srFlip);
   const [fullScreen, setFullScreen] = React.useState(!!saved.fullScreen);
@@ -34661,7 +34806,7 @@ function useKeepaChart(opts) {
     sr: true,
     amz: true,
     new: true,
-    used: true
+    used: false
   });
   const [srFlip, setSrFlip] = React.useState(!!saved.srFlip);
   const [fullScreen, setFullScreen] = React.useState(false);
@@ -40361,7 +40506,7 @@ function pskSoftUnits(v) {
     }
   }, m[3]));
 }
-// short names shown under the values while touching the chart (V2)
+// short names on the chart: in the legend, and under the values while touching it. The long names are in Chart settings.
 const PSK_SHORT = {
   newbb: 'NBB',
   sr: 'SR',
@@ -40411,7 +40556,7 @@ function PSKLegend({
     }
   }), c.touching ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
     style: {
-      fontSize: colorVals ? 13.5 : 12.5,
+      fontSize: colorVals ? 15 : 12.5,
       fontWeight: 700,
       color: colorVals ? LSERIES[k].color : TOKENS.text,
       fontVariantNumeric: 'tabular-nums'
@@ -40424,18 +40569,18 @@ function PSKLegend({
       top: '100%',
       marginTop: 2,
       textAlign: 'center',
-      fontSize: 9.5,
+      fontSize: 12,
       fontWeight: 600,
-      letterSpacing: 0.3,
-      color: '#B4B4BA'
+      letterSpacing: 0.2,
+      color: '#8A8A8E'
     }
   }, PSK_SHORT[k])) : /*#__PURE__*/React.createElement("span", {
     style: {
-      fontSize: dots ? 12.5 : 12,
+      fontSize: dots ? 14 : 12,
       fontWeight: dots ? 600 : 500,
       color: dots ? LSERIES[k].color : TOKENS.textSecondary
     }
-  }, k === 'sr' ? dots ? 'Sales R' : 'SR' : LSERIES[k].label))));
+  }, dots ? PSK_SHORT[k] : k === 'sr' ? 'SR' : LSERIES[k].label))));
 }
 const pskCard = {
   background: '#fff',
@@ -40467,14 +40612,17 @@ function PSKCard1({
       paddingBottom: 10
     }
   }, /*#__PURE__*/React.createElement("div", {
-    style: pskRow(64)
+    style: pskRow(54)
   }, c.loading ? /*#__PURE__*/React.createElement(PSKLegendSkel, null) : /*#__PURE__*/React.createElement("div", {
     key: "lg",
     className: "psk-fade",
     style: {
       display: 'flex',
       flex: 1,
-      minWidth: 0
+      minWidth: 0,
+      ...(c.touching ? {
+        transform: 'translateY(-7px)'
+      } : {})
     }
   }, /*#__PURE__*/React.createElement(PSKLegend, {
     c: c,
@@ -40494,14 +40642,30 @@ function PSKCard1({
   }, /*#__PURE__*/React.createElement(PSKChart, _extends({}, pskChartProps(c), {
     h: 200,
     axis: "out",
-    three: true,
-    dateTag: true
+    three: true
   })))), /*#__PURE__*/React.createElement("div", {
     style: pskRow(64, {
       margin: '14px 16px 0',
       padding: 0
     })
-  }, /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("div", {
+  }, c.loading ? /*#__PURE__*/React.createElement("span", null) : c.touching && c.hoverIdx != null && LDATES[c.hoverIdx] ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: TOKENS.font,
+      fontSize: 15,
+      fontWeight: 600,
+      color: TOKENS.text,
+      fontVariantNumeric: 'tabular-nums',
+      paddingLeft: 2
+    }
+  }, LDATES[c.hoverIdx].getDate() + ' ' + L_MON[LDATES[c.hoverIdx].getMonth()]) : /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: TOKENS.font,
+      fontSize: 13,
+      fontWeight: 500,
+      color: '#AEAEB2',
+      paddingLeft: 2
+    }
+  }, "Touch chart for values"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8
@@ -41073,6 +41237,7 @@ function PSZEmptyLower() {
 function PSKChartCard({
   keepa,
   loading,
+  idle,
   w
 }) {
   const e = keepa.ext;
@@ -41099,9 +41264,9 @@ function PSKChartCard({
     setSettingsOpen: () => keepa.openSettings && keepa.openSettings(),
     onExpand: () => e.setFullScreen(true),
     loading: !!loading,
-    loadStyle: 'sweep',
+    loadStyle: idle ? 'none' : 'sweep',
     w
-  }; // chart loading look: set to Sweep; w: chart width (370 inside the card)
+  }; // idle: a still frame until the request is sent (first scroll); then the Sweep look while it loads. w: chart width (370 inside the card)
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, PSK_LOAD_CSS), /*#__PURE__*/React.createElement(PSKCard1, {
     c: c
   }));
@@ -41115,10 +41280,35 @@ function pszSectionBgs() {
     yours: PS_WARM
   };
 }
+// The chart is drawn at the width of its card, whatever the phone (it used to be a fixed 370, which left a gap on wide phones and cut on narrow ones)
+function PSKFit({
+  children
+}) {
+  const ref = React.useRef(null);
+  const [w, setW] = React.useState(370);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const m = () => {
+      const n = Math.round(el.clientWidth);
+      if (n > 0) setW(n);
+    };
+    m();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(m);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return /*#__PURE__*/React.createElement("div", {
+    ref: ref
+  }, children(w));
+}
 function PSZLower({
   result,
   lo,
   histState,
+  chartLoading,
+  chartIdle,
   keepa,
   sbyb,
   onShowAll,
@@ -41158,11 +41348,12 @@ function PSZLower({
       overflow: 'hidden',
       background: '#fff'
     }
-  }, /*#__PURE__*/React.createElement(PSKChartCard, {
+  }, /*#__PURE__*/React.createElement(PSKFit, null, w => /*#__PURE__*/React.createElement(PSKChartCard, {
     keepa: keepa,
-    w: 370,
-    loading: !!lo.r24 && histState === 'pending'
-  })))), /*#__PURE__*/React.createElement("div", {
+    w: w,
+    idle: !!chartIdle,
+    loading: chartLoading != null ? chartLoading : !!lo.r24 && histState === 'pending'
+  }))))), /*#__PURE__*/React.createElement("div", {
     style: (() => {
       const sb = pszSectionBgs(),
         bg = sb.yours;
@@ -41327,6 +41518,16 @@ function ProScanPage({
   }, [result]);
   // r24 (V3 / Main app): your stock / past sales are "checked" 3 s after the scan — until then the history dots show as not checked
   const [histState, setHistState] = React.useState('pending');
+  // the chart is requested when the user starts scrolling (as in prod and the Release), not with every scan (19 Nov 2026: it no longer loads by itself)
+  const [chartState, setChartState] = React.useState('idle'); // 'idle' | 'loading' | 'ready'
+  React.useEffect(() => {
+    setChartState('idle');
+  }, [result]);
+  React.useEffect(() => {
+    if (chartState !== 'loading') return;
+    const id = setTimeout(() => setChartState('ready'), 2500);
+    return () => clearTimeout(id);
+  }, [chartState]);
   React.useEffect(() => {
     setHistState('pending');
     const id = setTimeout(() => setHistState('ready'), 3000);
@@ -41404,6 +41605,7 @@ function ProScanPage({
   }, [searchOpen]);
   const onScroll = e => {
     const y = e.target.scrollTop;
+    if (y > 4 && chartState === 'idle') setChartState('loading'); // first scroll starts the chart request
     const prev = lastY.current;
     const atEnd = e.target.scrollHeight - e.target.clientHeight - y < 24; // reached the bottom of the page
     if (y < 48) setBarCollapsed(false); // near top → always expanded
@@ -41672,6 +41874,8 @@ function ProScanPage({
     result: result,
     lo: layoutOpts,
     histState: histState,
+    chartLoading: chartState !== 'ready',
+    chartIdle: chartState === 'idle',
     keepa: keepa,
     sbyb: sbyb,
     onShowAll: setShowAll,
@@ -42170,64 +42374,29 @@ function pscAsrNode(n) {
   }, "K"));
   return String(n);
 }
-// Camera stats (ASR · Sold days · Profit) — versions, tweak "Camera stats". They stay inside the camera (its place and size are fixed),
+// Camera stats (ASR · Sold days · Profit), tweak "Camera stats". They stay inside the camera (its place and size are fixed),
 // so legibility has to come from the chip itself, whatever the camera is looking at.
-//   glass: the first design — see-through, value only        solid: near-black, bigger value, label under it
-//   white: white chips, dark value                          color: near-black, each value in its own colour
-//   bar:   one near-black bar across the camera, three columns, biggest value
-const PSC_STAT_COL = {
-  asr: '#FFD166',
-  soldDays: '#6FD3FF',
-  profit: '#4ADE80',
-  loss: '#FF7B72'
-};
+//   glass (Original): three see-through chips        bar (default): near-black, ASR and Sold days in one box, Profit on its own
 function PSCamChip({
   value,
-  label,
   onTap,
   kind = 'glass',
-  color,
   bare
 }) {
-  const K = {
-    glass: {
-      bg: 'rgba(20,20,24,0.5)',
-      bd: '1px solid rgba(255,255,255,0.12)',
-      fg: '#fff',
-      fs: 20,
-      pad: '9px 8px',
-      blur: true
-    },
-    solid: {
-      bg: 'rgba(12,12,15,0.9)',
-      bd: '1px solid rgba(255,255,255,0.16)',
-      fg: '#fff',
-      fs: 24,
-      pad: '9px 6px'
-    },
-    white: {
-      bg: '#fff',
-      bd: '1px solid rgba(0,0,0,0.06)',
-      fg: '#111114',
-      fs: 24,
-      pad: '9px 6px',
-      sh: '0 3px 12px rgba(0,0,0,0.28)'
-    },
-    color: {
-      bg: 'rgba(12,12,15,0.9)',
-      bd: '1px solid rgba(255,255,255,0.16)',
-      fg: color || '#fff',
-      fs: 24,
-      pad: '9px 6px'
-    },
-    bar: {
-      bg: 'transparent',
-      bd: 'none',
-      fg: '#fff',
-      fs: 26,
-      pad: '9px 4px'
-    }
-  }[kind] || {};
+  const K = kind === 'bar' ? {
+    bg: 'transparent',
+    bd: 'none',
+    fg: '#fff',
+    fs: 26,
+    pad: '9px 4px'
+  } : {
+    bg: 'rgba(20,20,24,0.5)',
+    bd: '1px solid rgba(255,255,255,0.12)',
+    fg: '#fff',
+    fs: 20,
+    pad: '9px 8px',
+    blur: true
+  };
   return /*#__PURE__*/React.createElement("div", {
     onClick: onTap,
     style: {
@@ -42240,7 +42409,6 @@ function PSCamChip({
       } : {}),
       border: bare ? 'none' : K.bd,
       borderRadius: 11,
-      boxShadow: bare ? 'none' : K.sh || 'none',
       padding: K.pad,
       textAlign: 'center',
       cursor: 'pointer',
@@ -42257,59 +42425,21 @@ function PSCamChip({
       whiteSpace: 'nowrap',
       fontVariantNumeric: 'tabular-nums'
     }
-  }, value), K.lab && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 3,
-      fontFamily: TOKENS.font,
-      fontSize: 10,
-      fontWeight: 700,
-      letterSpacing: 0.7,
-      textTransform: 'uppercase',
-      color: K.lab,
-      whiteSpace: 'nowrap'
-    }
-  }, label));
+  }, value));
 }
 // ── what the camera has read: a pill right above "Read ISBN · Barcode" (placement measured on the live app) ──
 // Read ISBN: while the camera reads text it shows its attempts (gray, flickering) — so the seller sees it working even
 // before a valid ISBN-10 / ISBN-13 is found. Barcode: a laser line sweeps the frame instead. When a number is found, its
 // digits roll in one by one (about 0.8 s, on purpose slower than the data itself), the pill lights up and the frame glows.
 // Tap the camera to read again.
-const PS_CAM_CSS = `@keyframes psc-digit{0%{opacity:0;transform:translateY(9px);filter:blur(3px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:translateY(0)}}
-@keyframes psc-pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.15);opacity:1}100%{transform:scale(1);opacity:1}}
-@keyframes psc-glow{0%{box-shadow:0 0 0 4000px rgba(0,0,0,.18),0 0 0 0 rgba(242,183,54,.0)}35%{box-shadow:0 0 0 4000px rgba(0,0,0,.18),0 0 22px 4px rgba(242,183,54,.65)}100%{box-shadow:0 0 0 4000px rgba(0,0,0,.18),0 0 0 0 rgba(242,183,54,0)}}
-@keyframes psc-laser{0%{top:8%}50%{top:88%}100%{top:8%}}
-@keyframes psc-sheen{0%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
-@keyframes psc-pillin{0%{transform:translate(-50%,-50%) scale(.85);opacity:0}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
-@keyframes ps-pulse{0%,100%{opacity:.35}50%{opacity:1}}
-@keyframes psc-shake{0%,100%{transform:translate(-50%,-50%)}20%{transform:translate(calc(-50% - 7px),-50%)}40%{transform:translate(calc(-50% + 6px),-50%)}60%{transform:translate(calc(-50% - 4px),-50%)}80%{transform:translate(calc(-50% + 2px),-50%)}}
-@keyframes psc-bar{from{width:0}to{width:100%}}
-@keyframes psc-tada{0%{transform:translate(-50%,-50%) scale(.6);opacity:.2}55%{transform:translate(-50%,-50%) scale(1.14);opacity:1}100%{transform:translate(-50%,-50%) scale(1)}}
-@keyframes psc-burst{0%{opacity:1;transform:translate(0,0) scale(.4)}70%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1)}}
-@keyframes psc-thumb{0%{opacity:0;transform:translate(0,0) scale(.4)}25%{opacity:1;transform:translate(0,-34px) scale(1.1)}70%{opacity:1;transform:translate(0,-42px) scale(1)}100%{opacity:0;transform:translate(0,-52px) scale(.9)}}
+const PS_CAM_CSS = `@keyframes psc-laser{0%{top:8%}50%{top:88%}100%{top:8%}}
 @keyframes ps-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`;
-const PS_CAM_CH = '0123456789';
 function pscAttempt(code) {
   // a plausible wrong read: part of the real number with a few misread characters, or noise from the cover
   const r = Math.random();
   if (r < 0.2) return ['ISBN', 'ISBN-1', 'IS8N 0-', '978-0-', 'Harper', 'S0N', 'B00K'][Math.floor(Math.random() * 7)];
   const len = 4 + Math.floor(Math.random() * Math.max(1, code.length - 3));
   return code.slice(0, len).split('').map(c => Math.random() < 0.28 ? 'O0SBIlZ7'[Math.floor(Math.random() * 8)] : c).join('');
-}
-// valid-looking numbers that pass the ISBN / EAN check but aren't on Amazon — what the camera "finds" and searches in vain
-function pscIsbn10() {
-  const d = Array.from({
-    length: 9
-  }, () => Math.floor(Math.random() * 10));
-  const c = (11 - d.reduce((a, x, i) => a + x * (10 - i), 0) % 11) % 11;
-  return d.join('') + (c === 10 ? 'X' : String(c));
-}
-function pscEan() {
-  const d = [9, 7, 9].concat(Array.from({
-    length: 9
-  }, () => Math.floor(Math.random() * 10)));
-  const c = (10 - d.reduce((a, x, i) => a + x * (i % 2 ? 3 : 1), 0) % 10) % 10;
-  return d.join('') + c;
 }
 // The scan story has three places, one job each:
 //   1 Searching — inside the frame only. Read ISBN: the text it is trying (gray, changing) · Barcode: the red line sweeps.
@@ -42329,27 +42459,9 @@ const PSL_CSS = `@keyframes psl-pop{0%{transform:scale(1)}35%{transform:scale(1.
 @keyframes psl-ring{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(var(--sx),var(--sy))}}
 @keyframes psl-in{0%{opacity:0;transform:translateY(calc(-50% + 5px))}100%{opacity:1;transform:translateY(-50%)}}
 @keyframes psl-draw{from{stroke-dashoffset:26}to{stroke-dashoffset:0}}
-@keyframes psl-badge{0%{opacity:0;transform:scale(.3)}16%{opacity:1;transform:scale(1.14)}28%{transform:scale(1)}78%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.85)}}
-@keyframes psl-thumb{0%{opacity:0;transform:translateY(0) scale(.3) rotate(-25deg)}15%{opacity:1;transform:translateY(0) scale(1.15) rotate(10deg)}26%{transform:translateY(0) scale(1) rotate(-8deg)}36%{transform:translateY(0) scale(1) rotate(0)}70%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-6px) scale(.8)}}
-@keyframes psl-ray{0%{opacity:0;transform:translateY(-20px) scaleY(.3)}25%{opacity:1}100%{opacity:0;transform:translateY(-29px) scaleY(1)}}
-@keyframes psl-shim{0%{background-position:-240px 0}100%{background-position:240px 0}}
 @keyframes psl-bar{from{width:0}to{width:100%}}
 @keyframes psl-in2{from{opacity:0}to{opacity:1}}
 @keyframes psl-land{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}`;
-const PSL_THUMB = /*#__PURE__*/React.createElement("svg", {
-  width: "19",
-  height: "19",
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "#fff",
-  strokeWidth: "2.2",
-  strokeLinecap: "round",
-  strokeLinejoin: "round"
-}, /*#__PURE__*/React.createElement("path", {
-  d: "M7 10v11"
-}), /*#__PURE__*/React.createElement("path", {
-  d: "M15 5.9L14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 8a2 2 0 0 1-1.9 1.4H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.8a2 2 0 0 0 1.8-1.1L12 2a3.1 3.1 0 0 1 3 3.9z"
-}));
 function PSLCheck({
   size = 12,
   w = 4,
@@ -42372,35 +42484,6 @@ function PSLCheck({
       animation: `psl-draw .32s ease-out ${delay}s forwards`
     }
   }));
-}
-// short green rays around a centre point
-function PSLRays({
-  n = 10,
-  delay = 0.06
-}) {
-  return /*#__PURE__*/React.createElement(React.Fragment, null, Array.from({
-    length: n
-  }, (_, i) => /*#__PURE__*/React.createElement("span", {
-    key: i,
-    style: {
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      transform: `rotate(${i * 360 / n}deg)`
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      position: 'absolute',
-      left: -1.25,
-      top: -4,
-      width: 2.5,
-      height: 8,
-      borderRadius: 2,
-      background: i % 2 ? '#fff' : PSL_GREEN,
-      opacity: 0,
-      animation: `psl-ray .6s ease-out ${delay}s forwards`
-    }
-  }))));
 }
 // 1 · searching, inside the frame
 // the read line: centred below the frame, above "Read ISBN · Barcode" — nothing is drawn inside the frame except the barcode line
@@ -42498,129 +42581,9 @@ function PSLFoundText({
     delay: delay + 0.1
   })), code));
 }
-// 2 · found: the celebration, centred on the camera ('check' and 'thumbs'); 'frame' rings the frame instead (in PSCameraCard)
-function PSLCelebrate({
-  kind,
-  mode
-}) {
-  const isThumb = kind === 'thumbs';
+// 3 · loading (Live search only): the top of the page clears; the wait itself shows inside the camera, where the stat chips were
+function PSLLoadingTop() {
   return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      left: '50%',
-      top: pslTop(mode),
-      width: 0,
-      height: 0,
-      zIndex: 8,
-      pointerEvents: 'none'
-    }
-  }, /*#__PURE__*/React.createElement(PSLRays, {
-    n: 10,
-    delay: 0.08
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      position: 'absolute',
-      left: -18,
-      top: -18,
-      width: 36,
-      height: 36,
-      borderRadius: '50%',
-      background: PSL_GREEN,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      boxShadow: '0 6px 18px rgba(52,199,89,0.5), 0 0 0 5px rgba(52,199,89,0.2)',
-      opacity: 0,
-      animation: isThumb ? 'psl-thumb 1.5s cubic-bezier(.3,.7,.4,1) forwards' : 'psl-badge 1.1s ease-out forwards'
-    }
-  }, isThumb ? PSL_THUMB : /*#__PURE__*/React.createElement(PSLCheck, {
-    size: 20,
-    w: 3.6,
-    delay: 0.12
-  })));
-}
-// 3 · loading, where the data lands (top of the page). kind: 'skeleton' | 'blur' | 'spot'
-function PSLLoadingTop({
-  kind,
-  src,
-  ms,
-  code,
-  live
-}) {
-  const m = SEARCH_MODES[src] || SEARCH_MODES.cl,
-    mc = m.solid;
-  const shim = {
-    background: 'linear-gradient(90deg, rgba(60,60,67,0.08) 0, rgba(60,60,67,0.16) 40%, rgba(60,60,67,0.08) 80%)',
-    backgroundSize: '480px 100%',
-    animation: 'psl-shim 1.1s linear infinite',
-    borderRadius: 6
-  };
-  const bar = /*#__PURE__*/React.createElement("span", {
-    style: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: 3,
-      background: `${mc}22`
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: 'block',
-      height: '100%',
-      background: mc,
-      borderRadius: '0 2px 2px 0',
-      animation: `psl-bar ${ms}ms cubic-bezier(.3,.6,.6,1) forwards`
-    }
-  }));
-  const status = big => /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 7,
-      fontFamily: TOKENS.font,
-      fontSize: big ? 14 : 12.5,
-      fontWeight: 700,
-      color: TOKENS.textSecondary
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: big ? 14 : 12,
-      height: big ? 14 : 12,
-      borderRadius: '50%',
-      border: `2px solid ${mc}33`,
-      borderTopColor: mc,
-      animation: 'ps-spin .7s linear infinite'
-    }
-  }), "Getting data", /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: mc,
-      fontWeight: 800,
-      letterSpacing: 0.4
-    }
-  }, "\xB7 ", m.name));
-  if (kind === 'blur') return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      inset: 0,
-      zIndex: 4,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingTop: 30,
-      boxSizing: 'border-box',
-      pointerEvents: 'none'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      background: 'rgba(255,255,255,0.92)',
-      borderRadius: 999,
-      padding: '9px 16px',
-      boxShadow: '0 6px 20px rgba(0,0,0,0.12)'
-    }
-  }, status(true)), bar);
-  // spot: the top just clears; the loading itself shows in the camera, where the stat chips and flash were
-  if (kind === 'spot') return /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
       inset: 0,
@@ -42629,100 +42592,6 @@ function PSLLoadingTop({
       pointerEvents: 'none'
     }
   });
-  // skeleton: the shape of what is coming, shimmering, with the status above it
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      inset: 0,
-      zIndex: 4,
-      background: TOKENS.bg,
-      padding: '0 16px 12px',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'flex-end',
-      boxSizing: 'border-box',
-      pointerEvents: 'none'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginBottom: 12
-    }
-  }, status(false)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 14
-    }
-  }, live ? /*#__PURE__*/React.createElement("span", {
-    style: {
-      ...shim,
-      width: 62,
-      height: 88,
-      borderRadius: 8,
-      flexShrink: 0
-    }
-  }) : /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: 62,
-      height: 88,
-      borderRadius: 8,
-      flexShrink: 0,
-      boxSizing: 'border-box',
-      border: '1.5px dashed rgba(60,60,67,0.22)'
-    }
-  }) /* no cover outside Live: the Search Live button's spot */, /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 9,
-      paddingTop: 2
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      ...shim,
-      width: '45%',
-      height: 12
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      ...shim,
-      width: '92%',
-      height: 17
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      ...shim,
-      width: '70%',
-      height: 13
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 8,
-      marginTop: 4
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      ...shim,
-      width: 62,
-      height: 24,
-      borderRadius: 8
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      ...shim,
-      width: 62,
-      height: 24,
-      borderRadius: 8
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      ...shim,
-      width: 62,
-      height: 24,
-      borderRadius: 8
-    }
-  })))), bar);
 }
 // ── what the camera sees (a drawing, not a real camera): a hand holding a book's back cover up to the lens, shelves behind.
 // blur 0…1: the whole-page scroll on the Scan page blurs it fully once the page moves.
@@ -43054,8 +42923,7 @@ function PSCameraCard({
     return () => ts.forEach(clearTimeout);
   }, [code, mode, run, src]);
   const found = ph.k !== 'scan';
-  const fm = window.__bzTweaks && window.__bzTweaks.scanFound || 'frame';
-  const camLoad = ph.k === 'load' && (window.__bzTweaks && window.__bzTweaks.scanLoad || 'spot') === 'spot';
+  const camLoad = ph.k === 'load';
   const lm = SEARCH_MODES[src] || SEARCH_MODES.cl;
   let cs = window.__bzTweaks && window.__bzTweaks.camStats || 'bar'; // Bar is the default (also on the phone test, which has no Tweaks)
   if (cs !== 'glass') cs = 'bar'; // 17 Nov 2026: two versions left — Original (glass) and Bar (default); Solid, White and Color were dropped
@@ -43126,16 +42994,12 @@ function PSCameraCard({
     const cAsr = /*#__PURE__*/React.createElement(PSCamChip, {
       kind: cs,
       bare: merged,
-      color: PSC_STAT_COL.asr,
-      label: "ASR",
       value: pscAsrNode(asr),
       onTap: () => onStat('asr')
     });
     const cSold = /*#__PURE__*/React.createElement(PSCamChip, {
       kind: cs,
       bare: merged,
-      color: PSC_STAT_COL.soldDays,
-      label: "Sold Days",
       value: soldDays != null ? /*#__PURE__*/React.createElement("span", null, soldDays, /*#__PURE__*/React.createElement("span", {
         style: {
           ...pscUnitFix,
@@ -43147,8 +43011,6 @@ function PSCameraCard({
     const cProfit = /*#__PURE__*/React.createElement(PSCamChip, {
       kind: cs,
       bare: merged,
-      color: profit != null && profit < 0 ? PSC_STAT_COL.loss : PSC_STAT_COL.profit,
-      label: "Profit",
       value: profit == null ? '–' : /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
         style: {
           ...pscUnitFix,
@@ -43157,18 +43019,11 @@ function PSCameraCard({
       }, "$"), profit.toFixed(2)),
       onTap: () => onStat('profit')
     });
-    const wh = cs === 'white';
     const box = {
       display: 'flex',
       borderRadius: 14,
-      ...(wh ? {
-        background: '#fff',
-        border: '1px solid rgba(0,0,0,0.06)',
-        boxShadow: '0 3px 12px rgba(0,0,0,0.28)'
-      } : {
-        background: 'rgba(12,12,15,0.9)',
-        border: '1px solid rgba(255,255,255,0.16)'
-      })
+      background: 'rgba(12,12,15,0.9)',
+      border: '1px solid rgba(255,255,255,0.16)'
     };
     return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -43190,7 +43045,7 @@ function PSCameraCard({
       style: {
         width: 1,
         margin: '10px 0',
-        background: wh ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.16)'
+        background: 'rgba(255,255,255,0.16)'
       }
     }), cSold), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -43259,7 +43114,7 @@ function PSCameraCard({
         boxShadow: '0 0 0 4000px rgba(0,0,0,.18)',
         overflow: 'hidden',
         transition: 'top .3s ease, bottom .3s ease, border-color .15s',
-        animation: found && fm === 'frame' ? 'psl-pop .45s ease-out' : 'none'
+        animation: found ? 'psl-pop .45s ease-out' : 'none'
       }
     }, !found && code && mode === 'barcode' && /*#__PURE__*/React.createElement(PSLSearching, {
       mode: mode,
@@ -43271,8 +43126,8 @@ function PSCameraCard({
       key: 'ft' + run,
       code: ph.code,
       mode: mode,
-      delay: fm === 'frame' ? 0 : fm === 'thumbs' ? 1.0 : 0.85
-    }), found && fm === 'frame' && [0, 0.14].map(d => /*#__PURE__*/React.createElement("div", {
+      delay: 0
+    }), found && [0, 0.14].map(d => /*#__PURE__*/React.createElement("div", {
       key: 'rg' + run + d,
       style: {
         ...rect,
@@ -43284,11 +43139,7 @@ function PSCameraCard({
         animation: `psl-ring .7s ease-out ${d}s forwards`
       }
     })));
-  })(), found && fm !== 'frame' && /*#__PURE__*/React.createElement(PSLCelebrate, {
-    key: 'c' + run,
-    kind: fm,
-    mode: mode
-  }), /*#__PURE__*/React.createElement("div", {
+  })(), /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
       left: 0,
@@ -43556,8 +43407,8 @@ function PSCameraView({
     style: {
       position: 'absolute',
       left: 14,
-      width: 38,
-      height: 38,
+      width: 44,
+      height: 44,
       borderRadius: '50%',
       border: '1px solid rgba(60,60,67,0.08)',
       background: 'linear-gradient(180deg,#fff,oklch(0.99 0.005 278))',
@@ -43964,7 +43815,6 @@ function PSCamPage({
   const [salesOpen, setSalesOpen] = React.useState(false); // V3: Recent sales
   const [trigBg] = window.useBzPref ? window.useBzPref('trigBg', 'none') : ['none'];
   const loading = camPh.k === 'load';
-  const ld = window.__bzTweaks && window.__bzTweaks.scanLoad || 'spot';
   // search mode (Live / Cloud / Local database): a floating button at the bottom, opposite Back
   const [srcMode, setSrcModeRaw] = React.useState(psGetSearchMode);
   const setSrcMode = m => {
@@ -43974,6 +43824,16 @@ function PSCamPage({
   const [srcMenu, setSrcMenu] = React.useState(false);
   // your stock / past sales and the chart load 3 s after each scan, as on the Pro Scan page
   const [histState, setHistState] = React.useState('pending');
+  // the chart waits for the first scroll here too
+  const [chartState, setChartState] = React.useState('idle');
+  React.useEffect(() => {
+    setChartState('idle');
+  }, [result]);
+  React.useEffect(() => {
+    if (chartState !== 'loading') return;
+    const id = setTimeout(() => setChartState('ready'), 2500);
+    return () => clearTimeout(id);
+  }, [chartState]);
   const keepa = useKeepaChart({
     rangeInSettings: true,
     bzFinal: !!(window.__bzTweaks && window.__bzTweaks.proScanTop === 'v3') && !!(v && v.main)
@@ -44009,6 +43869,7 @@ function PSCamPage({
   const sync = React.useCallback(() => {
     const el = scRef.current;
     if (!el) return;
+    if (el.scrollTop > 4) setChartState(c => c === 'idle' ? 'loading' : c);
     if (full) {
       setVh(el.clientHeight);
       setCamBlur(Math.max(0, Math.min(1, el.scrollTop / 70)));
@@ -44145,11 +44006,6 @@ function PSCamPage({
     key: 'top' + (camPh.run || 0) + camPh.k,
     style: {
       position: 'relative',
-      transition: 'filter .2s, opacity .2s',
-      ...(loading && ld === 'blur' ? {
-        filter: 'blur(7px)',
-        opacity: 0.55
-      } : {}),
       animation: camPh.k === 'done' && camPh.code ? 'psl-land .38s ease-out' : 'none'
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -44170,13 +44026,7 @@ function PSCamPage({
   }, /*#__PURE__*/React.createElement(PSCamBB, {
     buyBox: result.buyBox,
     kind: TOPV.bb
-  }))), loading && /*#__PURE__*/React.createElement(PSLLoadingTop, {
-    kind: ld,
-    src: camPh.src,
-    ms: camPh.ms,
-    code: camPh.code,
-    live: srcMode === 'lv' || liveDone
-  })), /*#__PURE__*/React.createElement("div", {
+  }))), loading && /*#__PURE__*/React.createElement(PSLLoadingTop, null)), /*#__PURE__*/React.createElement("div", {
     style: {
       flexShrink: 0,
       height: zoneH(PS_CAM_H),
@@ -44224,14 +44074,9 @@ function PSCamPage({
       }),
       position: 'relative',
       transition: 'opacity .25s, filter .25s',
-      ...(loading ? ld === 'blur' ? {
-        filter: 'blur(5px)',
-        opacity: 0.5
-      } : ld === 'spot' ? {
+      ...(loading ? {
         opacity: 0,
         pointerEvents: 'none'
-      } : {
-        opacity: 0.3
       } : {}),
       ...(V.hint === 'line' ? {
         borderTop: `1px solid ${TOKENS.divider}`
@@ -44279,6 +44124,8 @@ function PSCamPage({
     result: result,
     lo: PSZ_APP_LAYOUT,
     histState: histState,
+    chartLoading: chartState !== 'ready',
+    chartIdle: chartState === 'idle',
     keepa: keepa,
     sbyb: sbyb,
     onShowAll: setShowAll,
@@ -60327,13 +60174,10 @@ const PSTVScreen = React.memo(function PSTVScreen({
 const PSTV_CSS = `
 .pstv-noscroll { scrollbar-width: none; } .pstv-noscroll::-webkit-scrollbar { display: none; }
 .pstv-tap{-webkit-tap-highlight-color:transparent;transition:background-color .15s ease}
-.pstv-tap:active{} /* press feedback now comes from the app-wide system (components.jsx) */
 .pstv-offers24 span[style*="font-size: 25px"]{font-size:24px !important;font-weight:600 !important}
 .pstv-chip{border:none;cursor:pointer;font:inherit;-webkit-tap-highlight-color:transparent}
 /* iOS-style press: a soft gray highlight plus a slight shrink that springs back on release */
 .pstv-press-row,.pstv-press-card{-webkit-tap-highlight-color:transparent;user-select:none;transition:transform .32s cubic-bezier(.34,1.56,.64,1),background-color .18s ease}
-.pstv-press-row:active{}
-.pstv-press-card:active{}
 .pstv-conf{position:absolute;left:0;top:0;border-radius:1px;opacity:0;animation:pstvConf .8s cubic-bezier(.15,.7,.3,1) forwards}
 @keyframes pstvFloat{0%,100%{transform:perspective(600px) rotateY(-16deg) translateY(0)}50%{transform:perspective(600px) rotateY(-10deg) translateY(-2px)}}
 @keyframes pstvRipple{0%{box-shadow:0 0 0 0 var(--rc)}80%,100%{box-shadow:0 0 0 13px rgba(0,0,0,0)}}
@@ -63489,8 +63333,7 @@ function BVOffersT({
       }
     }, b));
   };
-  const L = React.useContext(BV_LIVE),
-    pick = L && L.onSelect;
+  // All offers is for reading only (19 Nov 2026): no offer is selected here and tapping a price does nothing
   return /*#__PURE__*/React.createElement(BVSheet, {
     title: "All offers",
     maxH: "88%"
@@ -63534,16 +63377,11 @@ function BVOffersT({
   }, i + 1), r.offers.map(c => {
     const v = c.rows[i];
     const m = (c.marks || []).find(x => x.idx === i);
-    const sid = `${c.k}-${i}`,
-      isSel = pick && L.selectedId === sid && v != null;
     return /*#__PURE__*/React.createElement("div", {
       key: c.k,
-      onClick: () => pick && v != null && pick(sid, bvPrice(v)),
       style: {
-        cursor: pick && v != null ? 'pointer' : 'default',
         borderRadius: 8,
         margin: '0 3px',
-        boxShadow: isSel ? 'inset 0 0 0 2px #0A84FF' : 'none',
         textAlign: 'center',
         fontSize: o.cents ? 18 : 18,
         fontWeight: o.cents ? 700 : 600,
@@ -64393,6 +64231,14 @@ function BVChartA() {
     onChange: setAx
   }));
 }
+// Chart settings names the lines in full; the chart itself uses the short names (NBB, SR, AMZ, New, Used)
+const BV_CHART_LONG = {
+  newbb: 'New Buy Box',
+  sr: 'Sales Rank',
+  amz: 'Amazon price',
+  new: 'Lowest new price',
+  used: 'Lowest used price'
+};
 function BVChartB() {
   const L = React.useContext(BV_LIVE),
     e = L && L.keepa;
@@ -64455,7 +64301,7 @@ function BVChartB() {
       flex: 1,
       fontSize: 15.5
     }
-  }, s.label), /*#__PURE__*/React.createElement(BVSwitch, {
+  }, BV_CHART_LONG[k] || s.label), /*#__PURE__*/React.createElement(BVSwitch, {
     on: vis[k]
   })), i === 0, {
     padding: '9px 0',
@@ -68290,23 +68136,6 @@ function MoreIconChevron({
     strokeLinejoin: "round"
   }));
 }
-function MoreIconBack({
-  size = 22,
-  color = TOKENS.text
-}) {
-  return /*#__PURE__*/React.createElement("svg", {
-    width: size,
-    height: size,
-    viewBox: "0 0 22 22",
-    fill: "none"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M14 4l-7 7 7 7",
-    stroke: color,
-    strokeWidth: "1.9",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }));
-}
 function MoreIconCheck({
   size = 11,
   color = '#FFFFFF'
@@ -68980,47 +68809,6 @@ function SubpageOverlay({
     }
   }, children);
 }
-function SubpageHeader({
-  title,
-  accessory = null,
-  onBack
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '50px 16px 14px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      background: TOKENS.bg
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onBack,
-    "aria-label": "Back",
-    style: {
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      padding: 6,
-      margin: '-6px 0 -6px -6px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, /*#__PURE__*/React.createElement(MoreIconBack, null)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0,
-      fontFamily: TOKENS.fontDisplay,
-      fontSize: 19,
-      fontWeight: 700,
-      color: TOKENS.text,
-      letterSpacing: -0.3,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    }
-  }, title), accessory);
-}
 
 // ────────────────────────────── ACCOUNT ──────────────────────────────
 function AccountPage({
@@ -69622,8 +69410,8 @@ function Composer({
     disabled: !canSend,
     "aria-label": "Send",
     style: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: 999,
       border: 'none',
       cursor: canSend ? 'pointer' : 'default',
@@ -70437,7 +70225,6 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "feedbackToday": "negatives",
   "proScanTop": "v3",
   "proScanDots": "asinR",
-  "scanLoad": "spot",
   "device": "pro",
   "result": "found",
   "camStats": "bar"
@@ -70914,10 +70701,8 @@ function App() {
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
   // Pro Scan reads its color tweaks from here at render time.
   window.__bzTweaks = {
-    ...tweaks,
-    scanFound: 'frame',
-    scanLoad: 'spot'
-  }; // Loading time (camera): Spotlight (decided 18 Nov 2026, no longer a tweak) · // Found moment: Frame (decided 17 Nov 2026, no longer a tweak)
+    ...tweaks
+  };
   if (BZ_ON_PHONE) return /*#__PURE__*/React.createElement(Phone, {
     tweaks: tweaks
   }); // phone test: the app itself, edge to edge
