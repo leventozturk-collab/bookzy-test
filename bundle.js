@@ -40607,6 +40607,7 @@ function PSKCard1({
   c
 }) {
   return /*#__PURE__*/React.createElement("div", {
+    "data-see": "chart",
     style: {
       ...pskCard,
       paddingBottom: 10
@@ -40689,7 +40690,7 @@ function PSKCard1({
 // Four looks, picked with the Main app tweak "Chart loading": shimmer / pulse / sweep / draw
 const PSK_LOAD_CSS = `@keyframes psk-shim{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 @keyframes psk-pulse{0%,100%{opacity:.35}50%{opacity:1}}
-@keyframes psk-sweep{0%{left:38px;opacity:0}8%{opacity:1}92%{opacity:1}100%{left:360px;opacity:0}}
+@keyframes psk-sweep{0%{left:var(--psk-s0,38px);opacity:0}8%{opacity:1}92%{opacity:1}100%{left:var(--psk-s1,360px);opacity:0}}
 @keyframes psk-dash{to{stroke-dashoffset:-60}}
 @keyframes psk-fadein{from{opacity:0}to{opacity:1}}
 @keyframes psk-reveal{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
@@ -40847,6 +40848,8 @@ function PSKLoading({
     }
   })), style === 'sweep' && /*#__PURE__*/React.createElement("div", {
     style: {
+      '--psk-s0': pl + 'px',
+      '--psk-s1': pl + iw - 2 + 'px',
       position: 'absolute',
       top: pt,
       height: ih,
@@ -41315,7 +41318,8 @@ function PSZLower({
   tiles = true,
   inset = 0,
   padTop = 16,
-  padBottom = 124
+  padBottom = 124,
+  afterBB
 }) {
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -41331,13 +41335,17 @@ function PSZLower({
     }
   }, tiles && /*#__PURE__*/React.createElement("div", {
     style: {
-      padding: lo.r24 ? '0 16px 16px' : '0 16px 10px'
+      padding: afterBB ? '0 16px' : lo.r24 ? '0 16px 16px' : '0 16px 10px'
     }
   }, /*#__PURE__*/React.createElement(PSZBBTiles, {
     buyBox: result.buyBox,
     corner: !!lo.bbCorner,
     r24: !!lo.r24
-  })), /*#__PURE__*/React.createElement("div", {
+  })), afterBB && /*#__PURE__*/React.createElement("div", {
+    style: {
+      margin: '-1px 0 -4px'
+    }
+  }, afterBB), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '0 16px'
     }
@@ -41373,6 +41381,7 @@ function PSZLower({
       };
     })()
   }, lo.r24 && window.PSTVDotsAt ? /*#__PURE__*/React.createElement("div", {
+    "data-see": "yours",
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -41497,7 +41506,7 @@ function ProScanPage({
   const camStart = !!(window.__bzStart && window.__bzStart.camera && !layoutOptsIn);
   // Playground artifact: the last scanned item is shared between Playground and Release (and survives switching), so the page never opens empty after the first scan
   const shareScan = !layoutOptsIn && !initialResult && !initialNf;
-  const [startRes] = React.useState(() => initialResult || (camStart ? psGenerateResult() : null) || (shareScan ? psLoadSharedScan() : null));
+  const [startRes] = React.useState(() => initialResult || (camStart ? psGenerateResult() : null) || (shareScan ? psLoadSharedScan() : null) || (shareScan && window.__bzSee ? psGenerateResult() : null)); // a "See it" link never opens on an empty page
   const [result, setResult] = React.useState(startRes);
   // nothing found (not found / offline / no listing / invalid): shown instead of the page until the next item
   const [nf, setNf] = React.useState(initialNf || null);
@@ -41525,7 +41534,7 @@ function ProScanPage({
   }, [result]);
   React.useEffect(() => {
     if (chartState !== 'loading') return;
-    const id = setTimeout(() => setChartState('ready'), 2500);
+    const id = setTimeout(() => setChartState('ready'), 2000);
     return () => clearTimeout(id);
   }, [chartState]);
   React.useEffect(() => {
@@ -41684,6 +41693,21 @@ function ProScanPage({
     ...window.pstvOptCtx(window.PSTV_APP_TOP),
     dotsAt: window.__bzTweaks && window.__bzTweaks.proScanDots || 'asinR',
     // tweak: where the sold / in-stock dots sit
+    topLay: window.__bzTweaks && window.__bzTweaks.proScanLayout || 'orig',
+    // tweak "Top layout": orig · a1 · a2 · a3
+    titleBg: window.__bzTweaks && window.__bzTweaks.titleBg || 'none',
+    // tweak "Title background" (A6)
+    openYours: () => {
+      // A3: the ASIN + history row scrolls the page down to the Yours section
+      const sc = scrollRef.current,
+        y = sc && sc.querySelector('[data-see="yours"]');
+      if (!y) return;
+      const k = sc.offsetHeight ? sc.getBoundingClientRect().height / sc.offsetHeight : 1; // the phone may be drawn scaled
+      sc.scrollTo({
+        top: Math.max(0, sc.scrollTop + (y.getBoundingClientRect().top - sc.getBoundingClientRect().top) / (k || 1) - 70),
+        behavior: 'smooth'
+      });
+    },
     ...(layoutOpts || {}),
     v3,
     trigBg,
@@ -41774,6 +41798,31 @@ function ProScanPage({
   const edgeEnd = () => {
     edgeRef.current = null;
   };
+
+  // "See it" (Dev checklist): open this page at the place the row is about
+  React.useEffect(() => {
+    const see = !layoutOptsIn && window.__bzSee;
+    if (!see) return;
+    const id = setTimeout(() => {
+      const sc = scrollRef.current;
+      if (see === 'search') openSearchWith(result ? result.isbn : null);
+      if (see === 'offers-settings') setOffSetOpen(true);
+      if (sc && (see === 'chart' || see === 'chart-settings')) {
+        const c = sc.querySelector('[data-see="chart"]'),
+          k = sc.offsetHeight ? sc.getBoundingClientRect().height / sc.offsetHeight : 1; // k: the phone may be drawn scaled
+        if (c) sc.scrollTo({
+          top: Math.max(0, sc.scrollTop + (c.getBoundingClientRect().top - sc.getBoundingClientRect().top) / (k || 1) - 170),
+          behavior: 'smooth'
+        });
+        if (see === 'chart-settings') setTimeout(() => keepa.openSettings && keepa.openSettings(), 3200); // after the chart has loaded
+      }
+      if (sc && see === 'end') sc.scrollTo({
+        top: sc.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 900);
+    return () => clearTimeout(id);
+  }, []);
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(PSKeyframes, null), /*#__PURE__*/React.createElement("div", {
     ref: scrollRef,
     onScroll: onScroll,
@@ -41871,6 +41920,9 @@ function ProScanPage({
       paddingBottom: layoutOpts && layoutOpts.zone8 && (!empty || layoutOpts.r24) ? 0 : 124
     }
   }, layoutOpts && layoutOpts.zone8 && !empty ? /*#__PURE__*/React.createElement(PSZLower, {
+    afterBB: v3 && a11Ctx && a11Ctx.topLay === 'a5' && result && window.PSTVAsinPill ? /*#__PURE__*/React.createElement(window.PSTVAsinPill, {
+      ctx: a11Ctx
+    }) : null,
     result: result,
     lo: layoutOpts,
     histState: histState,
@@ -43831,7 +43883,7 @@ function PSCamPage({
   }, [result]);
   React.useEffect(() => {
     if (chartState !== 'loading') return;
-    const id = setTimeout(() => setChartState('ready'), 2500);
+    const id = setTimeout(() => setChartState('ready'), 2000);
     return () => clearTimeout(id);
   }, [chartState]);
   const keepa = useKeepaChart({
@@ -53292,19 +53344,21 @@ function PSTVRound12({
             flexShrink: 0
           }
         }, pstv20Ico.chev(hl === 'solid' ? 'rgba(255,255,255,0.85)' : '#C7C7CC', 7, 12)));
+        // A6: trigger name in sentence case at 700; the detail shows only "No T.P." (no target price), nothing else
+        const a6 = ctx.v3 && ctx.topLay === 'a6';
         const v3Rows = ctx.v3 && [v3Row(ctx.openTriggers || ctx.openVerdict, /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
           style: {
             fontFamily: T.fontDisplay,
             fontSize: Math.min(ctx.trigSize || 18, 18),
-            fontWeight: ctx.trigWeight || 800,
-            letterSpacing: 0.3,
-            textTransform: 'uppercase',
+            fontWeight: a6 ? 700 : ctx.trigWeight || 800,
+            letterSpacing: a6 ? 0 : 0.3,
+            textTransform: a6 ? 'none' : 'uppercase',
             color: solid ? '#fff' : t.color,
             flex: '0 1 auto',
             minWidth: 0,
             ...pstvEll
           }
-        }, t.ok ? t.name : t.none ? 'No triggers' : 'No trigger match'), (tType || t.none) && /*#__PURE__*/React.createElement("span", {
+        }, t.ok ? t.name : t.none ? 'No triggers' : 'No trigger match'), (a6 ? tType === 'No target' : tType || t.none) && /*#__PURE__*/React.createElement("span", {
           style: {
             fontSize: ctx.metaSize || 13,
             fontWeight: 500,
@@ -53314,7 +53368,7 @@ function PSTVRound12({
             whiteSpace: 'nowrap',
             flexShrink: 0
           }
-        }, t.none ? 'Set up' : tType)), tbg !== 'none' ? tbg : null), v3Row(ctx.openChecks, t.flags.length ? /*#__PURE__*/React.createElement("span", {
+        }, a6 ? 'No T.P.' : t.none ? 'Set up' : tType)), tbg !== 'none' ? tbg : null), v3Row(ctx.openChecks, t.flags.length ? /*#__PURE__*/React.createElement("span", {
           style: {
             display: 'flex',
             alignItems: 'center',
@@ -53372,6 +53426,237 @@ function PSTVRound12({
         }, /*#__PURE__*/React.createElement("path", {
           d: "M5 12.5l4.5 4.5L19 7"
         })), "No flags"))];
+        // Top layout (Playground tweak, V3 only): orig · a1 = trigger on its own row above; cover left, title / ASIN + history tags / flags right
+        //   · a2 = bigger cover with the ASIN and the history tags under it; trigger / title / flags right · a3 = a2's cover, with ASIN + tags as a row after the title (tap: scroll to Yours) · a4 = cover as tall as the three rows; ASIN + bare tags as a bordered pill centred under the ASR row (PSTVAsinPill) · a5 = a4 with the pill after the Buy Box cards (placed by the page, PSZLower). a1 and a2 show history as tags (icon + number), not dots.
+        const lay = ctx.v3 && ctx.topLay || 'orig';
+        // A6 (tweak "Title background"): none · border (a thin grey border, no fill) · grey · blue · white (a white chip with a soft shadow) · trigger (a light tint of the trigger's colour)
+        const tBg = lay === 'a6' ? ctx.titleBg || 'none' : 'none';
+        const TITLE_BG = {
+          border: {
+            boxShadow: 'inset 0 0 0 1px rgba(60,60,67,0.18)'
+          },
+          grey: {
+            background: 'rgba(118,118,128,0.10)'
+          },
+          blue: {
+            background: 'rgba(10,132,255,0.10)'
+          },
+          white: {
+            background: '#FFFFFF',
+            boxShadow: '0 1px 2px rgba(15,15,20,0.06), 0 0 0 0.5px rgba(60,60,67,0.10)'
+          },
+          trigger: {
+            background: t.color + '1A'
+          }
+        };
+        const v3TitleOnly = ctx.v3 && /*#__PURE__*/React.createElement("div", {
+          className: "pstv-press-row",
+          onClick: ctx.openProduct,
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            minWidth: 0,
+            cursor: 'pointer',
+            minHeight: 34,
+            padding: '0 8px',
+            margin: '0 -8px',
+            borderRadius: tBg !== 'none' ? 10 : 9,
+            ...(TITLE_BG[tBg] || {})
+          }
+        }, titleOnly(18, 600, {
+          flex: '0 1 auto'
+        }), /*#__PURE__*/React.createElement("span", {
+          style: {
+            flex: 1
+          }
+        }), /*#__PURE__*/React.createElement("span", {
+          style: {
+            display: 'inline-flex',
+            flexShrink: 0
+          }
+        }, pstv20Ico.chev('#C7C7CC', 7, 12)));
+        const hPend = ctx.histState === 'pending';
+        const hTag = (ico, n, c, title, bare) => /*#__PURE__*/React.createElement("span", {
+          title: hPend ? 'Checking…' : title + ': ' + n,
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            height: 22,
+            padding: bare ? 0 : '0 7px',
+            borderRadius: 7,
+            boxSizing: 'border-box',
+            flexShrink: 0,
+            fontSize: bare ? 13 : 12.5,
+            fontWeight: 700,
+            fontVariantNumeric: 'tabular-nums',
+            lineHeight: 1,
+            transition: 'background .3s, color .3s',
+            ...(hPend ? {
+              color: '#C7C7CC',
+              ...(bare ? {} : {
+                boxShadow: 'inset 0 0 0 1px rgba(60,60,67,0.18)'
+              })
+            } : n ? {
+              color: c,
+              ...(bare ? {} : {
+                background: c + '1F'
+              })
+            } : {
+              color: '#A1A1A8',
+              ...(bare ? {} : {
+                background: 'rgba(118,118,128,0.10)'
+              })
+            })
+          }
+        }, ico(hPend ? '#C7C7CC' : n ? c : '#A1A1A8', bare ? 13 : 12), hPend ? '–' : n);
+        const histTags = /*#__PURE__*/React.createElement("span", {
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            pointerEvents: 'none'
+          }
+        }, hTag(pstvSoldIco, (r.pastSales || []).length, '#0A84FF', 'Sold before'), hTag(pstvBoxIco, (r.listings || []).length, '#AF52DE', 'In stock'));
+        // A3: the same tags without a background (icon + number only)
+        const histTagsBare = /*#__PURE__*/React.createElement("span", {
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            pointerEvents: 'none'
+          }
+        }, hTag(pstvSoldIco, (r.pastSales || []).length, '#0A84FF', 'Sold before', true), hTag(pstvBoxIco, (r.listings || []).length, '#AF52DE', 'In stock', true));
+        // A6: ASIN + history tags + a flags tag (warning icon + number, like the history tags) in one row; the row opens Compliance checks
+        const flagIco = (c, sz) => /*#__PURE__*/React.createElement("svg", {
+          width: sz + 1,
+          height: sz,
+          viewBox: "0 0 24 22",
+          fill: "none"
+        }, /*#__PURE__*/React.createElement("path", {
+          d: "M10.3 2.6a2 2 0 0 1 3.4 0l8.7 15.1A2 2 0 0 1 20.7 21H3.3a2 2 0 0 1-1.7-3.3L10.3 2.6z",
+          stroke: c,
+          strokeWidth: "2.4",
+          strokeLinejoin: "round"
+        }), /*#__PURE__*/React.createElement("path", {
+          d: "M12 8.5v4.5",
+          stroke: c,
+          strokeWidth: "2.4",
+          strokeLinecap: "round"
+        }), /*#__PURE__*/React.createElement("circle", {
+          cx: "12",
+          cy: "16.6",
+          r: "1.3",
+          fill: c
+        }));
+        const flagTag = /*#__PURE__*/React.createElement("span", {
+          title: t.flags.length ? t.flags.join(' · ') : 'No flags',
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            height: 22,
+            flexShrink: 0,
+            fontSize: 13,
+            fontWeight: 700,
+            fontVariantNumeric: 'tabular-nums',
+            lineHeight: 1,
+            color: t.flags.length ? L9_FLAG_TXT : '#A1A1A8'
+          }
+        }, flagIco(t.flags.length ? L9_FLAG_TXT : '#A1A1A8', 13), t.flags.length);
+        // A6: the row has a light tint like the trigger row's "light" background: neutral grey with no flags, the flag colour when any flag is raised
+        const v3MetaFlags = ctx.v3 && /*#__PURE__*/React.createElement("div", {
+          className: "pstv-press-row",
+          onClick: e => {
+            e.stopPropagation();
+            ctx.openChecks && ctx.openChecks();
+          },
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            minWidth: 0,
+            cursor: 'pointer',
+            minHeight: 34,
+            padding: '0 8px',
+            margin: '0 -8px',
+            borderRadius: 10,
+            background: t.flags.length ? L9_FLAG_BG : 'rgba(118,118,128,0.10)'
+          }
+        }, /*#__PURE__*/React.createElement("span", {
+          style: {
+            flexShrink: 0,
+            fontSize: ctx.metaSize || 13,
+            fontWeight: 500,
+            color: '#8E8E93',
+            fontVariantNumeric: 'tabular-nums',
+            whiteSpace: 'nowrap'
+          }
+        }, r.asin), /*#__PURE__*/React.createElement("span", {
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            pointerEvents: 'none'
+          }
+        }, hTag(pstvSoldIco, (r.pastSales || []).length, '#0A84FF', 'Sold before', true), hTag(pstvBoxIco, (r.listings || []).length, '#AF52DE', 'In stock', true), flagTag), /*#__PURE__*/React.createElement("span", {
+          style: {
+            flex: 1
+          }
+        }), /*#__PURE__*/React.createElement("span", {
+          style: {
+            display: 'inline-flex',
+            flexShrink: 0
+          }
+        }, pstv20Ico.chev('#C7C7CC', 7, 12)));
+        const asinTxt = fs => /*#__PURE__*/React.createElement("span", {
+          style: {
+            flexShrink: 0,
+            fontSize: fs,
+            fontWeight: 500,
+            color: '#8E8E93',
+            fontVariantNumeric: 'tabular-nums',
+            whiteSpace: 'nowrap'
+          }
+        }, r.asin);
+        const v3Meta = /*#__PURE__*/React.createElement("div", {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            minWidth: 0,
+            minHeight: 30
+          }
+        }, asinTxt(ctx.metaSize || 13), histTags);
+        // A1 and A3: the ASIN + history row is tappable: it scrolls the page down to the Yours section (right chevron, like the other rows)
+        const v3MetaTap = ctx.v3 && /*#__PURE__*/React.createElement("div", {
+          className: "pstv-press-row",
+          onClick: e => {
+            e.stopPropagation();
+            ctx.openYours && ctx.openYours();
+          },
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            minWidth: 0,
+            cursor: 'pointer',
+            minHeight: 32,
+            padding: '0 8px',
+            margin: '0 -8px',
+            borderRadius: 9
+          }
+        }, asinTxt(ctx.metaSize || 13), lay === 'a3' ? histTagsBare : histTags, /*#__PURE__*/React.createElement("span", {
+          style: {
+            flex: 1
+          }
+        }), /*#__PURE__*/React.createElement("span", {
+          style: {
+            display: 'inline-flex',
+            flexShrink: 0
+          }
+        }, pstv20Ico.chev('#C7C7CC', 7, 12)));
         return /*#__PURE__*/React.createElement(React.Fragment, null, !ctx.noFacts && (() => {
           const ic = T.textTertiary;
           const catIco = /*#__PURE__*/React.createElement("svg", {
@@ -53461,7 +53746,11 @@ function PSTVRound12({
             height: "8",
             rx: "1.5"
           })), cat, 'c'), k !== 142 && item(asinIco, r.asin, 'a'), (r.pastSales || []).length > 0 && item(pstvSoldIco(ic, 12), (r.pastSales || []).length, 's'), (r.listings || []).length > 0 && item(pstvBoxIco(ic, 12), (r.listings || []).length, 'b'));
-        })(), /*#__PURE__*/React.createElement("div", {
+        })(), lay === 'a1' && /*#__PURE__*/React.createElement("div", {
+          style: {
+            padding: `0 ${ctx.inset || 0}px 4px`
+          }
+        }, v3Rows[0]), /*#__PURE__*/React.createElement("div", {
           style: {
             display: 'flex',
             gap: ctx.blockGap || 18,
@@ -53480,18 +53769,41 @@ function PSTVRound12({
               borderRadius: 20,
               margin: '0 -6px',
               padding: `10px ${(ctx.inset || 0) + 6}px 10px`
+            } : {}),
+            ...(lay !== 'orig' && lay !== 'a4' && lay !== 'a5' && lay !== 'a6' ? {
+              height: 'auto',
+              paddingBottom: 8,
+              ...(lay === 'a2' ? {
+                alignItems: 'flex-start'
+              } : {})
             } : {})
           }
-        }, (() => {
+        }, (inner => lay === 'a2' ? /*#__PURE__*/React.createElement("div", {
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 7,
+            flexShrink: 0
+          }
+        }, inner, asinTxt(12.5), histTags) : inner)((() => {
+          const a4 = lay === 'a4' || lay === 'a5' || lay === 'a6',
+            big = lay === 'a2' || lay === 'a3' || a4,
+            cw = a4 ? tBg !== 'none' ? 78 : 75 : big ? 86 : ctx.cw,
+            ch = a4 ? tBg !== 'none' ? 110 : 106 : big ? 122 : ctx.ch; // A6 with a title background: 4px between the rows, so the cover is 110 // A4: the cover is as tall as the three rows beside it (3 × 34 + 2 gaps of 2)
           const coverNode = ctx.ph && !ctx.isLive ? /*#__PURE__*/React.createElement(PSTVLivePh, {
-            ctx: ctx,
+            ctx: big ? {
+              ...ctx,
+              phW: cw,
+              phH: ch
+            } : ctx,
             kind: ctx.ph
           }) : /*#__PURE__*/React.createElement("div", {
             style: {
               position: 'relative',
               flexShrink: 0
             }
-          }, ctx.bindUnder ? coverX(ctx.two ? ctx.cw || 50 : 72, ctx.two ? ctx.ch || 72 : 104, ctx.two ? 8 : 10, undefined, () => {} /* TODO: open the product's Amazon page */) : coverX(62, 90), !ctx.bindUnder && /*#__PURE__*/React.createElement("span", {
+          }, ctx.bindUnder ? coverX(ctx.two ? cw || 50 : 72, ctx.two ? ch || 72 : 104, ctx.two ? 8 : 10, undefined, () => {} /* TODO: open the product's Amazon page */) : coverX(62, 90), !ctx.bindUnder && /*#__PURE__*/React.createElement("span", {
             style: {
               position: 'absolute',
               right: 5,
@@ -53614,7 +53926,7 @@ function PSTVRound12({
               pointerEvents: 'none'
             }
           }, b));
-        })(), ctx.v3 ? col([v3Rows[0], v3Title, v3Rows[1]], 2) : col(ctx.two ? [
+        })()), ctx.v3 ? col(lay === 'a1' ? [v3TitleOnly, v3MetaTap, v3Rows[1]] : lay === 'a2' ? [v3Rows[0], v3TitleOnly, v3Rows[1]] : lay === 'a3' ? [v3Rows[0], v3TitleOnly, v3MetaTap, v3Rows[1]] : lay === 'a6' ? [v3Rows[0], v3TitleOnly, v3MetaFlags] : lay === 'a4' || lay === 'a5' ? [v3Rows[0], v3TitleOnly, v3Rows[1]] : [v3Rows[0], v3Title, v3Rows[1]], lay === 'a3' ? 0 : tBg !== 'none' ? 4 : 2) : col(ctx.two ? [
         /*#__PURE__*/
         // 29: two rows — title · ASIN, then trigger · offer · flags (no price); whole row opens the verdict
         React.createElement("div", {
@@ -56201,7 +56513,17 @@ function PSTVRound4({
     units: true
   } : {}, {
     gap: o.cardGap || 10
-  })), /*#__PURE__*/React.createElement("div", {
+  })), ctx.v3 && ctx.topLay === 'a4' && ctx.result ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 12
+    }
+  }), /*#__PURE__*/React.createElement(PSTVAsinPill, {
+    ctx: ctx
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 12
+    }
+  })) /* A4: same distance to the ASR row above and the offers table below */ : /*#__PURE__*/React.createElement("div", {
     style: {
       height: o.cardGap || 14
     }
@@ -60736,6 +61058,66 @@ function PSTVPhone() {
 }
 
 // PSTV_APP_TOP = the options of the version applied to the Main app (the Main app's "New version" top design; currently A19).
+// A4 (Top layout tweak): the ASIN and the history counts as one bordered pill, centred under the ASR row. No chevron; the pill is the whole tap area; a tap scrolls to Yours.
+function PSTVAsinPill({
+  ctx
+}) {
+  const r = ctx.result,
+    pend = ctx.histState === 'pending';
+  const tag = (ico, n, c, title) => /*#__PURE__*/React.createElement("span", {
+    title: pend ? 'Checking…' : title + ': ' + n,
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+      fontSize: 13,
+      fontWeight: 700,
+      fontVariantNumeric: 'tabular-nums',
+      lineHeight: 1,
+      color: pend ? '#C7C7CC' : n ? c : '#A1A1A8',
+      transition: 'color .3s'
+    }
+  }, ico(pend ? '#C7C7CC' : n ? c : '#A1A1A8', 13), pend ? '–' : n);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "pstv-press-row",
+    onClick: e => {
+      e.stopPropagation();
+      ctx.openYours && ctx.openYours();
+    },
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 12,
+      height: 32,
+      boxSizing: 'border-box',
+      padding: '0 14px',
+      borderRadius: 999,
+      border: '1px solid rgba(60,60,67,0.18)',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flexShrink: 0,
+      fontSize: ctx.metaSize || 13,
+      fontWeight: 500,
+      color: '#8E8E93',
+      fontVariantNumeric: 'tabular-nums',
+      whiteSpace: 'nowrap'
+    }
+  }, r.asin), /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 10,
+      pointerEvents: 'none'
+    }
+  }, tag(pstvSoldIco, (r.pastSales || []).length, '#0A84FF', 'Sold before'), tag(pstvBoxIco, (r.listings || []).length, '#AF52DE', 'In stock'))));
+}
 const PSTV_APP_TOP = {
   r4: 221,
   bar: 45,
@@ -60769,6 +61151,7 @@ const PSTV_APP_TOP = {
   statSoft: true
 };
 Object.assign(window, {
+  PSTVAsinPill,
   PSTVRecentSalesSheet,
   pstvRecentSales,
   PSTVOffersSettingsSheet,
@@ -69592,6 +69975,16 @@ const __TWEAKS_STYLE = `
   .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
     width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
   .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-ft{padding:10px 14px 12px;border-top:.5px solid rgba(0,0,0,.08);display:flex;flex-direction:column;gap:7px}
+  .twk-ftb{display:flex;gap:8px}
+  .twk-note{font-size:11px;color:rgba(41,38,27,.55);line-height:1.35}
+  .twk-set{appearance:none;flex:1;height:30px;border:0;border-radius:8px;background:#29261b;color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .twk-set:hover{background:#3d3a2e}
+  .twk-set:disabled{background:rgba(0,0,0,.06);color:rgba(41,38,27,.4);cursor:default}
+  .twk-set.ok{background:#1f8a4c;color:#fff}
+  .twk-reset{appearance:none;flex:1;height:30px;border:0;border-radius:8px;background:rgba(0,0,0,.06);color:#29261b;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .twk-reset:hover{background:rgba(0,0,0,.10)}
+  .twk-reset:disabled{color:rgba(41,38,27,.4);cursor:default;background:rgba(0,0,0,.04)}
   .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
     overflow-y:auto;overflow-x:hidden;min-height:0;
     scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
@@ -69751,8 +70144,14 @@ function useTweaks(defaults) {
 // is what actually hides the panel.
 function TweaksPanel({
   title = 'Tweaks',
-  children
+  children,
+  onReset,
+  onSetDefault,
+  isDefault,
+  defaultNote
 }) {
+  // footer: "Set as default" (saves the current choices as everyone's defaults) and "Reset to defaults"
+  const [saved, setSaved] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const dragRef = React.useRef(null);
   const offsetRef = React.useRef({
@@ -69843,7 +70242,32 @@ function TweaksPanel({
     onClick: dismiss
   }, "\u2715")), /*#__PURE__*/React.createElement("div", {
     className: "twk-body"
-  }, children)));
+  }, children), (onReset || onSetDefault) && /*#__PURE__*/React.createElement("div", {
+    className: "twk-ft"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "twk-ftb"
+  }, onSetDefault && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: 'twk-set' + (saved ? ' ok' : ''),
+    disabled: !saved && isDefault,
+    title: "Make the current choices the defaults for everyone who opens this page",
+    onClick: () => {
+      Promise.resolve(onSetDefault()).then(ok => {
+        if (ok !== false) {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 1600);
+        }
+      });
+    }
+  }, saved ? 'Saved' : 'Set as default'), onReset && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "twk-reset",
+    onClick: onReset,
+    disabled: isDefault,
+    title: "Go back to the defaults"
+  }, "Reset to defaults")), defaultNote && /*#__PURE__*/React.createElement("div", {
+    className: "twk-note"
+  }, defaultNote))));
 }
 
 // ── Layout helpers ──────────────────────────────────────────────────────────
@@ -70227,7 +70651,9 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "proScanDots": "asinR",
   "device": "pro",
   "result": "found",
-  "camStats": "bar"
+  "camStats": "bar",
+  "proScanLayout": "a6",
+  "titleBg": "grey"
 } /*EDITMODE-END*/;
 // Device (Tweaks): the phone's size in points
 const BZ_DEVICES = {
@@ -70261,12 +70687,15 @@ function useBzDeviceSize(key) {
 //   scanSession: 'pro' | 'legacy' | null (Scan tab only)
 //   orderOpen: open the first order's detail page (Orders tab only)
 //   camera: open Pro Scan's camera page (Scan tab, pro session)
+// "See it" links from a release's Dev checklist: the page shell sets window.__bzSee to the place to open
+//   top · camera · search · chart · chart-settings · offers-settings · end · tabbar   (the Pro Scan page handles the ones inside it)
+const BZ_SEE = typeof window !== 'undefined' && window.__bzSee || '';
 const START_VIEW = {
   tab: 'scan',
   morePage: null,
-  scanSession: 'pro',
+  scanSession: BZ_SEE === 'tabbar' ? null : 'pro',
   orderOpen: false,
-  camera: false
+  camera: BZ_SEE === 'camera'
 };
 window.__bzStart = START_VIEW;
 
@@ -70628,10 +71057,15 @@ function Phone({
 }
 function BookzyTweaks({
   tweaks,
-  setTweak
+  setTweak,
+  panel = {}
 }) {
   return /*#__PURE__*/React.createElement(TweaksPanel, {
-    title: "Tweaks"
+    title: "Tweaks",
+    onReset: panel.onReset,
+    onSetDefault: panel.onSetDefault,
+    isDefault: panel.isDefault,
+    defaultNote: panel.defaultNote
   }, /*#__PURE__*/React.createElement(TweakRadio, {
     label: "Device size",
     info: "The phone the design is shown on. Fit scales it to the height of your window.",
@@ -70683,6 +71117,59 @@ function BookzyTweaks({
     }],
     onChange: v => setTweak('proScanTop', v)
   }), /*#__PURE__*/React.createElement(TweakRadio, {
+    label: "Top layout",
+    info: "How the top of the Pro Scan page is arranged (V3 only). Original: trigger, title and flags beside the cover, history as dots. A1: trigger on its own row above. A2: bigger cover with the ASIN and history under it. A3: A2's cover, with the ASIN and history as a row after the title. A4: the ASIN and history as a bordered pill centred under the ASR row, tags without a background. A5: A4 with the pill after the Buy Box cards. A6: trigger, title, then the ASIN, history and flags as icon + number in one row that opens Compliance checks. In A1, A3, A4 and A5, tapping the ASIN and history scrolls to Yours. A1 to A6 show history as tags with an icon and a number.",
+    value: tweaks.proScanLayout || 'orig',
+    segments: true,
+    options: [{
+      value: 'orig',
+      label: 'Orig'
+    }, {
+      value: 'a1',
+      label: 'A1'
+    }, {
+      value: 'a2',
+      label: 'A2'
+    }, {
+      value: 'a3',
+      label: 'A3'
+    }, {
+      value: 'a4',
+      label: 'A4'
+    }, {
+      value: 'a5',
+      label: 'A5'
+    }, {
+      value: 'a6',
+      label: 'A6'
+    }],
+    onChange: v => setTweak('proScanLayout', v)
+  }), /*#__PURE__*/React.createElement(TweakRadio, {
+    label: "Title background",
+    info: "A6 only: the background behind the title row. Border is a thin grey outline with no fill. Grey matches the ASIN row without flags. White is a white chip with a soft shadow. Trigger is a light tint of the trigger's colour.",
+    value: tweaks.titleBg || 'grey',
+    segments: true,
+    options: [{
+      value: 'none',
+      label: 'None'
+    }, {
+      value: 'border',
+      label: 'Border'
+    }, {
+      value: 'grey',
+      label: 'Grey'
+    }, {
+      value: 'blue',
+      label: 'Blue'
+    }, {
+      value: 'white',
+      label: 'White'
+    }, {
+      value: 'trigger',
+      label: 'Trigger'
+    }],
+    onChange: v => setTweak('titleBg', v)
+  }), /*#__PURE__*/React.createElement(TweakRadio, {
     label: "Camera stats",
     info: "How ASR, Sold days and Profit are drawn on top of the camera. Original: three see-through chips. Bar: solid dark, ASR and Sold days together.",
     value: tweaks.camStats === 'glass' ? 'glass' : 'bar',
@@ -70697,8 +71184,113 @@ function BookzyTweaks({
     onChange: v => setTweak('camStats', v)
   }));
 }
+
+// Shared defaults: "Set as default" in the Tweaks panel saves the current choices to the artifact's database (doc nav/tweakDefaults),
+// so everyone who opens the Playground starts from them, and "Reset to defaults" goes back to them. Device size stays each person's own.
+// The phone test can't read the database: on "deploy", Claude copies these values into TWEAK_DEFAULTS above.
+const BZ_TWEAK_KEY = 'bzpg.tweaks.' + (location.hash.slice(1).split('--')[0] || 'main-app');
+const BZ_HAD_TWEAKS = (() => {
+  try {
+    return localStorage.getItem(BZ_TWEAK_KEY) != null;
+  } catch (e) {
+    return true;
+  }
+})();
+const BZ_PERSONAL = ['device'];
+function useSharedTweakDefaults() {
+  const [st, setSt] = React.useState({
+    values: null,
+    ref: null,
+    by: null,
+    at: null
+  });
+  React.useEffect(() => {
+    let off = null,
+      alive = true;
+    (async () => {
+      if (!window.claude || !window.claude.use) return;
+      const db = await window.claude.use('db');
+      if (!db || !alive) return;
+      const ref = db.doc('nav/tweakDefaults');
+      setSt(s => ({
+        ...s,
+        ref
+      }));
+      off = ref.onSnapshot(snap => {
+        const d = snap.exists && snap.data() || {};
+        setSt({
+          values: d.values || null,
+          ref,
+          by: d.by || null,
+          at: d.at || null
+        });
+      }, () => {});
+    })();
+    return () => {
+      alive = false;
+      off && off();
+    };
+  }, []);
+  return st;
+}
 function App() {
-  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const shared = useSharedTweakDefaults();
+  const defaults = {
+    ...TWEAK_DEFAULTS,
+    ...(shared.values || {})
+  };
+  const [tweaksSaved, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  // phone test: it has no Tweaks panel, so it always uses the defaults built in at deploy time (choices saved on the phone by older builds are ignored)
+  const tweaks = BZ_ON_PHONE ? {
+    ...TWEAK_DEFAULTS
+  } : tweaksSaved;
+  // first visit in this browser: start from the shared defaults as soon as they arrive
+  const firstApplied = React.useRef(false);
+  React.useEffect(() => {
+    if (!BZ_HAD_TWEAKS && shared.values && !firstApplied.current) {
+      firstApplied.current = true;
+      setTweak({
+        ...shared.values
+      });
+    }
+  }, [shared.values]);
+  const pick = o => {
+    const r = {};
+    Object.keys(defaults).forEach(k => {
+      if (!BZ_PERSONAL.includes(k)) r[k] = o[k] !== undefined ? o[k] : defaults[k];
+    });
+    return r;
+  };
+  const isDefault = JSON.stringify(pick(tweaks)) === JSON.stringify(pick(defaults));
+  const setAsDefault = async () => {
+    if (!shared.ref) return false;
+    let me = null;
+    try {
+      const u = await window.claude.use('user');
+      me = u ? await u.id() : null;
+    } catch (e) {}
+    try {
+      await shared.ref.set({
+        values: pick(tweaks),
+        by: me,
+        at: new Date().toISOString()
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+  const resetToDefaults = () => setTweak({
+    ...pick(defaults)
+  });
+  const when = shared.at ? new Date(shared.at) : null;
+  const defaultNote = !shared.ref ? 'Set as default needs the published page (it saves for everyone).' : when && !isNaN(when) ? 'Defaults last set ' + when.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short'
+  }) + ' at ' + when.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit'
+  }) + '. Device size stays your own.' : 'Device size stays your own.';
   // Pro Scan reads its color tweaks from here at render time.
   window.__bzTweaks = {
     ...tweaks
@@ -70722,7 +71314,13 @@ function App() {
     tweaks: tweaks
   }), /*#__PURE__*/React.createElement(BookzyTweaks, {
     tweaks: tweaks,
-    setTweak: setTweak
+    setTweak: setTweak,
+    panel: {
+      onReset: resetToDefaults,
+      onSetDefault: setAsDefault,
+      isDefault,
+      defaultNote
+    }
   }));
 }
 const root = ReactDOM.createRoot(document.getElementById('root'));
